@@ -1,9 +1,9 @@
 require('dotenv').config({ path: '../.env' }); // Ensure it points to the root server folder
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const { ApiError } = require('./utils/ApiError');
+const connectDB = require('./db/index'); // Import the DB connection function
 
 const app = express();
 
@@ -33,14 +33,12 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   let { statusCode, message } = err;
   
-  // If it's not an instance of ApiError, create a generic 500 error
   if (!(err instanceof ApiError)) {
     statusCode = 500;
     message = err.message || 'Internal Server Error';
-    console.error(err); // Log unexpected errors
+    console.error(err); 
   }
 
-  // Send response matching the ApiError structure
   res.status(statusCode || 500).json({
     success: false,
     message: message || 'Something went wrong',
@@ -51,14 +49,13 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Database connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/devpilot')
-  .then(() => {
-    console.log('Connected to MongoDB');
+// Connect to MongoDB and start server
+connectDB()
+.then(() => {
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-  });
+        console.log(`⚙️ Server is running at port : ${PORT}`);
+    })
+})
+.catch((err) => {
+    console.log("MONGO db connection failed !!! ", err);
+})

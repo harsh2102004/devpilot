@@ -44,8 +44,8 @@ router.post('/register', asyncHandler(async (req, res) => {
 
   jwt.sign(
     payload,
-    process.env.JWT_SECRET || 'fallback_secret',
-    { expiresIn: '1d' },
+    process.env.ACCESS_TOKEN_SECRET || 'fallback_secret',
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || '1d' },
     (err, token) => {
       if (err) throw new ApiError(500, 'Token generation failed');
       
@@ -89,8 +89,8 @@ router.post('/login', asyncHandler(async (req, res) => {
 
   jwt.sign(
     payload,
-    process.env.JWT_SECRET || 'fallback_secret',
-    { expiresIn: '1d' },
+    process.env.ACCESS_TOKEN_SECRET || 'fallback_secret',
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || '1d' },
     (err, token) => {
       if (err) throw new ApiError(500, 'Token generation failed');
       
