@@ -1,17 +1,21 @@
-require('dotenv').config({ path: '../.env' }); // Ensure it points to the root server folder
 const express = require('express');
 const cors = require('cors');
-const authRoutes = require('./routes/auth');
-const { ApiError } = require('./utils/ApiError');
-const connectDB = require('./db/index'); // Import the DB connection function
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+    origin: process.env.CORS_ORIGIN,
+    credentials: true
+}));
 
-// Routes
+app.use(express.json({ limit: "16kb" }));
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+app.use(express.static("public"));
+
+// Routes Import
+const authRoutes = require('./routes/auth');
+
+// Routes Declaration
 app.use('/api/auth', authRoutes);
 
 // Protected route test
@@ -24,12 +28,14 @@ app.get('/api/dashboard', auth, (req, res) => {
   );
 });
 
+// Global Error handling middleware
+const { ApiError } = require('./utils/ApiError');
+
 // Unknown route handler
 app.use((req, res, next) => {
   next(new ApiError(404, 'Not Found'));
 });
 
-// Global Error handling middleware
 app.use((err, req, res, next) => {
   let { statusCode, message } = err;
   
@@ -47,15 +53,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-
-// Connect to MongoDB and start server
-connectDB()
-.then(() => {
-    app.listen(PORT, () => {
-        console.log(`⚙️ Server is running at port : ${PORT}`);
-    })
-})
-.catch((err) => {
-    console.log("MONGO db connection failed !!! ", err);
-})
+module.exports = { app };
