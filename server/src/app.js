@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes.js';
 import projectRoutes from './routes/project.routes.js';
+import scanRoutes from './routes/scan.routes.js';
 import { auth } from './middleware/auth.js';
 import { ApiResponse } from './utils/ApiResponse.js';
 import { ApiError } from './utils/ApiError.js';
@@ -27,6 +28,7 @@ app.use(express.static("public"));
 // Routes Declaration
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/scan', scanRoutes);
 
 
 // Protected route test
