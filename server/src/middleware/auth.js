@@ -15,6 +15,10 @@ const auth = function (req, res, next) {
 
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || 'fallback_secret');
         req.user = decoded.user || decoded;
+        // Normalize: JWT payload uses `id`, but controllers expect `_id`
+        if (req.user.id && !req.user._id) {
+            req.user._id = req.user.id;
+        }
         next();
     } catch (err) {
         res.status(401).json({ message: 'Token is not valid' });
