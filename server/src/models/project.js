@@ -30,8 +30,23 @@ const projectSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
     },
-
-
+    codeGraphStats: {
+        totalFilesScanned: { type: Number, default: 0 },
+        codeFilesParsed: { type: Number, default: 0 },
+        totalNodes: { type: Number, default: 0 },
+        totalEdges: { type: Number, default: 0 },
+        functionsFound: { type: Number, default: 0 },
+        classesFound: { type: Number, default: 0 },
+    },
+    codeGraph: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CodeGraph',
+        default: null,
+    },
+    lastScannedAt: {
+        type: Date,
+        default: null,
+    },
 }, { timestamps: true })
 
 export const Project = mongoose.model('Project', projectSchema)

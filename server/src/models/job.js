@@ -69,6 +69,23 @@ const jobSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+        codeGraph: {
+            stats: {
+                totalFilesScanned: { type: Number, default: 0 },
+                codeFilesParsed: { type: Number, default: 0 },
+                totalNodes: { type: Number, default: 0 },
+                totalEdges: { type: Number, default: 0 },
+                functionsFound: { type: Number, default: 0 },
+                classesFound: { type: Number, default: 0 },
+            },
+            nodesCount: { type: Number, default: 0 },
+            edgesCount: { type: Number, default: 0 },
+            graphId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "CodeGraph",
+                default: null,
+            },
+        },
     },
     { timestamps: true }
 );
@@ -88,10 +105,18 @@ jobSchema.methods.updateProgress = async function (percent, message) {
     return this.save();
 };
 
-jobSchema.methods.markCompleted = async function () {
+jobSchema.methods.markCompleted = async function (codeGraphData) {
     this.status = "completed";
     this.progress = 100;
     this.completedAt = new Date();
+    if (codeGraphData?.stats) {
+        this.codeGraph = {
+            stats: codeGraphData.stats,
+            nodesCount: codeGraphData.nodes?.length || codeGraphData.stats.totalNodes || 0,
+            edgesCount: codeGraphData.edges?.length || codeGraphData.stats.totalEdges || 0,
+            graphId: codeGraphData.graphId || codeGraphData._id || null,
+        };
+    }
     this.logs.push({ level: "success", message: "Scan completed successfully" });
     return this.save();
 };

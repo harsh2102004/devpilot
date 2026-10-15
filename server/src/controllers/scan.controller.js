@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Project } from "../models/project.js";
 import { Job } from "../models/job.js";
+import { CodeGraph } from "../models/codeGraph.js";
 import { addScanJob } from "../queues/scan.queue.js";
 
 // Start repository scan
@@ -96,8 +97,33 @@ const getprojectscanhistory = asyncHandler(async (req, res) => {
     );
 });
 
+// Fetch latest code graph for a specific project
+const getProjectCodeGraph = asyncHandler(async (req, res) => {
+    const { projectId } = req.params;
+    const project = await Project.findById(projectId);
+
+    if (!project) {
+        throw new ApiError(404, "Project not found");
+    }
+
+    if (project.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You do not have permission to view this project's code graph");
+    }
+
+    const codeGraph = await CodeGraph.findOne({ projectId: projectId });
+
+    if (!codeGraph) {
+        throw new ApiError(404, "No code graph found for this project. Please run a scan first.");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, codeGraph, "Code graph fetched successfully")
+    );
+});
+
 export {
     startScan,
     getjobstatus,
-    getprojectscanhistory
+    getprojectscanhistory,
+    getProjectCodeGraph
 };

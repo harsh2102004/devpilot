@@ -168,7 +168,7 @@ Open `http://localhost:5173` in your browser.
 - [x] **Phase 3**: Project Management Cockpit & Octokit GitHub Integration
 - [x] **Phase 4**: Redis + BullMQ Queue Infrastructure, Job Lifecycle Model, Scan Controller
 - [x] **Phase 5 (Core)**: File Walker, Babel AST Symbol Parser & Cross-file Code Graph Engine
-- [ ] **Phase 5 (Integration)**: Worker scan integration with persistent graph storage
+- [x] **Phase 5 (Integration)**: Worker scan integration with persistent graph storage & querying API
 - [ ] **Phase 6**: Semantic Indexing & Vector Database (Pinecone)
 - [ ] **Phase 7**: AI Codebase Chat (Hybrid RAG: Vector + Code Graph)
 - [ ] **Phase 8**: Sandboxed Test Execution & Docker Runner
