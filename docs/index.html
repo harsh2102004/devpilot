@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevPilot | Master Architecture & Interview Preparation Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #070a12;
+            --bg-secondary: #0d121f;
+            --bg-card: rgba(17, 24, 39, 0.7);
+            --bg-card-hover: rgba(24, 33, 54, 0.85);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(99, 102, 241, 0.4);
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.25);
+            --accent-cyan: #06b6d4;
+            --accent-purple: #a855f7;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --sidebar-width: 290px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            overflow-x: hidden;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.5);
+        }
+
+        /* Sidebar Navigation */
+        aside.sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-badge {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--primary), var(--accent-cyan));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .brand-title h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #fff, var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-title p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .sidebar-nav {
+            padding: 20px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .nav-category {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            font-weight: 700;
+            padding: 12px 12px 4px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(3px);
+        }
+
+        .nav-link.active {
+            color: #fff;
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.2), transparent);
+            border-left: 3px solid var(--primary);
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            font-size: 1.1rem;
+        }
+
+        /* Main Content Container */
+        main.main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 40px 60px 80px;
+            max-width: 1400px;
+        }
+
+        /* Top Hero Header */
+        .hero {
+            position: relative;
+            padding: 40px;
+            background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent 60%),
+                        linear-gradient(180deg, rgba(13, 18, 31, 0.8), rgba(7, 10, 18, 0.95));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(12px);
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--accent-cyan), var(--accent-purple));
+        }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 20px;
+            color: #a5b4fc;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .hero h2 {
+            font-size: 2.3rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #ffffff 30%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            max-width: 820px;
+            margin-bottom: 24px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-highlight);
+        }
+
+        .metric-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            color: var(--accent-cyan);
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+        }
+
+        /* Section Styling */
+        section {
+            margin-bottom: 60px;
+            scroll-margin-top: 40px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-icon {
+            font-size: 1.6rem;
+        }
+
+        .section-title {
+            font-size: 1.55rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 2px;
+        }
+
+        /* Cards & Grid */
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            transition: all 0.25s ease;
+            margin-bottom: 20px;
+        }
+
+        .glass-card:hover {
+            border-color: var(--border-highlight);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-cyan { background: rgba(6, 182, 212, 0.15); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.3); }
+        .badge-purple { background: rgba(168, 85, 247, 0.15); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.3); }
+        .badge-emerald { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-amber { background: rgba(245, 158, 11, 0.15); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-rose { background: rgba(244, 63, 94, 0.15); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.3); }
+
+        /* Tech Stack Table */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .tech-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+
+        .tech-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .tech-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .tech-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .tech-rationale {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .tech-interview-tip {
+            background: rgba(99, 102, 241, 0.08);
+            border-left: 3px solid var(--primary);
+            padding: 8px 12px;
+            font-size: 0.82rem;
+            color: #c7d2fe;
+            border-radius: 0 6px 6px 0;
+        }
+
+        /* Architecture Diagram Flow */
+        .arch-diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 30px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+
+        .flow-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-width: 900px;
+            position: relative;
+        }
+
+        .flow-step {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .flow-step:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 20px var(--primary-glow);
+        }
+
+        .flow-step-icon {
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+        }
+
+        .flow-step-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .flow-step-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .flow-arrow {
+            padding: 0 12px;
+            color: var(--text-muted);
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        /* Interactive Interview Q&A Cards */
+        .search-bar-container {
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 16px 20px 16px 48px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            font-family: var(--font-sans);
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: var(--text-muted);
+        }
+
+        .filter-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .filter-tag {
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-tag:hover, .filter-tag.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .qa-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .qa-card:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+        }
+
+        .qa-header {
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .qa-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .qa-question {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .qa-toggle {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            transition: transform 0.25s ease;
+        }
+
+        .qa-card.open .qa-toggle {
+            transform: rotate(180deg);
+            color: var(--primary);
+        }
+
+        .qa-body {
+            display: none;
+            padding: 0 24px 22px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.93rem;
+            color: #cbd5e1;
+        }
+
+        .qa-card.open .qa-body {
+            display: block;
+            padding-top: 18px;
+        }
+
+        .qa-buzzwords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 14px;
+        }
+
+        .buzzword {
+            font-size: 0.72rem;
+            font-family: var(--font-mono);
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .qa-followup {
+            margin-top: 14px;
+            padding: 12px 16px;
+            background: rgba(245, 158, 11, 0.08);
+            border-left: 3px solid var(--accent-amber);
+            border-radius: 0 8px 8px 0;
+            font-size: 0.86rem;
+            color: #fde68a;
+        }
+
+        /* Code Block */
+        pre {
+            background: #05070d;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        code {
+            font-family: var(--font-mono);
+            color: var(--accent-cyan);
+            font-size: 0.88em;
+        }
+
+        /* Limitations Grid */
+        .limitations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .limitation-card {
+            background: rgba(244, 63, 94, 0.04);
+            border: 1px solid rgba(244, 63, 94, 0.18);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .limitation-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #fca5a5;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .limitation-desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .limitation-solution {
+            background: rgba(16, 185, 129, 0.08);
+            border-left: 3px solid var(--accent-emerald);
+            padding: 8px 12px;
+            font-size: 0.82rem;
+            color: #a7f3d0;
+            border-radius: 0 6px 6px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            aside.sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            aside.sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            main.main-content {
+                margin-left: 0;
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-badge">⚡</div>
+            <div class="brand-title">
+                <h1>DevPilot</h1>
+                <p>Architecture & Interview Hub</p>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <span class="nav-category">Overview</span>
+            <a href="#overview" class="nav-link active"><span class="nav-icon">🏛️</span> Architecture & Data Flow</a>
+            <a href="#tech-stack" class="nav-link"><span class="nav-icon">🛠️</span> Tech Stack & "Why This"</a>
+
+            <span class="nav-category">Phase Engineering</span>
+            <a href="#phase-1" class="nav-link"><span class="nav-icon">🔐</span> Phase 1: Auth & JWT</a>
+            <a href="#phase-2" class="nav-link"><span class="nav-icon">🎨</span> Phase 2: Frontend & UI</a>
+            <a href="#phase-3" class="nav-link"><span class="nav-icon">🐙</span> Phase 3: GitHub & Projects</a>
+            <a href="#phase-4" class="nav-link"><span class="nav-icon">⚡</span> Phase 4: Redis & BullMQ</a>
+            <a href="#phase-5" class="nav-link"><span class="nav-icon">🌳</span> Phase 5: AST & Code Graph</a>
+            <a href="#phase-6" class="nav-link"><span class="nav-icon">🧠</span> Phase 6: Vectors & Pinecone</a>
+
+            <span class="nav-category">Interview Mastery</span>
+            <a href="#interview-qa" class="nav-link"><span class="nav-icon">🎯</span> Top Interview Q&As</a>
+            <a href="#limitations" class="nav-link"><span class="nav-icon">⚖️</span> Limitations & Scaling</a>
+            <a href="#cheat-sheet" class="nav-link"><span class="nav-icon">📋</span> Quick Cheat Sheet</a>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <!-- HERO SECTION -->
+        <div class="hero" id="overview">
+            <div class="hero-tag">🌟 Production AI Engineering Portfolio</div>
+            <h2>DevPilot: Codebase Intelligence & Autonomous Debugging Platform</h2>
+            <p>
+                A full-stack, distributed developer platform that clones GitHub repositories, parses syntax trees (Babel AST), generates relational symbol graphs, indexes semantic vectors (Pinecone), and executes sandboxed automated fixes.
+            </p>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">5+ Phases</div>
+                    <div class="metric-label">Completed End-to-End</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">96+ Nodes</div>
+                    <div class="metric-label">AST Code Graph Symbols</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">192+ Edges</div>
+                    <div class="metric-label">Relational Dependencies</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">BullMQ + Redis</div>
+                    <div class="metric-label">Async Distributed Queues</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 1: SYSTEM ARCHITECTURE & FLOW -->
+        <section>
+            <div class="section-header">
+                <div class="section-header-left">
+                    <span class="section-icon">🏛️</span>
+                    <div>
+                        <h3 class="section-title">System Architecture & Pipeline Flow</h3>
+                        <p class="section-desc">How data moves from a user's GitHub repository to an indexed, searchable code intelligence system.</p>
+                    </div>
+                </div>
+                <span class="badge badge-cyan">Distributed Micro-Engine</span>
+            </div>
+
+            <div class="arch-diagram">
+                <div class="flow-container">
+                    <div class="flow-step">
+                        <div class="flow-step-icon">💻</div>
+                        <div class="flow-step-title">React Client</div>
+                        <div class="flow-step-sub">Glassmorphism UI</div>
+                    </div>
+                    <div class="flow-arrow">➔</div>
+                    <div class="flow-step">
+                        <div class="flow-step-icon">🛡️</div>
+                        <div class="flow-step-title">Express API</div>
+                        <div class="flow-step-sub">JWT & Ownership</div>
+                    </div>
+                    <div class="flow-arrow">➔</div>
+                    <div class="flow-step">
+                        <div class="flow-step-icon">⚡</div>
+                        <div class="flow-step-title">Redis + BullMQ</div>
+                        <div class="flow-step-sub">Retry Backoffs</div>
+                    </div>
+                    <div class="flow-arrow">➔</div>
+                    <div class="flow-step">
+                        <div class="flow-step-icon">⚙️</div>
+                        <div class="flow-step-title">Scanner Worker</div>
+                        <div class="flow-step-sub">repoCloner.service</div>
+                    </div>
+                    <div class="flow-arrow">➔</div>
+                    <div class="flow-step">
+                        <div class="flow-step-icon">🌳</div>
+                        <div class="flow-step-title">Babel AST Engine</div>
+                        <div class="flow-step-sub">codeGraph.service</div>
+                    </div>
+                    <div class="flow-arrow">➔</div>
+                    <div class="flow-step">
+                        <div class="flow-step-icon">🧠</div>
+                        <div class="flow-step-title">Pinecone DB</div>
+                        <div class="flow-step-sub">AST-Aware Chunks</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <h4 style="margin-bottom: 12px; font-size: 1.1rem; color: #fff;">🔑 The Core Architectural Breakthrough: Hybrid RAG</h4>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    Standard RAG platforms take text, chunk it naively every 500 characters, embed it, and pray the LLM gets the context. 
+                    <strong>DevPilot combines two complementary models of understanding:</strong>
+                </p>
+                <ul style="padding-left: 20px; color: #cbd5e1; display: flex; flex-direction: column; gap: 8px;">
+                    <li><strong>1. Deterministic Knowledge (Code Graph)</strong>: Exact symbol coordinates, file-to-file imports, caller-callee call graphs, and dependency trees built with Babel AST compiler theory.</li>
+                    <li><strong>2. Semantic Knowledge (Vector DB)</strong>: High-dimensional vector embeddings in Pinecone that understand intent (e.g. "where do we handle login?" finds <code>loginUser</code> even if the word "login" isn't explicitly mentioned).</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SECTION 2: TECH STACK & RATIONALE -->
+        <section id="tech-stack">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <span class="section-icon">🛠️</span>
+                    <div>
+                        <h3 class="section-title">Tech Stack & "Why This Over That?"</h3>
+                        <p class="section-desc">Key technical decisions you can defend with confidence in any system design interview.</p>
+                    </div>
+                </div>
+                <span class="badge badge-purple">Interview Talking Points</span>
+            </div>
+
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <div class="tech-title">
+                        <span class="tech-name">Babel AST Parser (@babel/parser)</span>
+                        <span class="badge badge-cyan">AST Engine</span>
+                    </div>
+                    <p class="tech-rationale">
+                        <strong>Why over Regex / LangChain?</strong> Regex splitters break on nested closures, async wrappers (<code>asyncHandler(async (req, res) => {})</code>), and template strings. Babel parses a true Abstract Syntax Tree with verified line numbers (<code>startLine</code>, <code>endLine</code>).
+                    </p>
+                    <div class="tech-interview-tip">
+                        💬 <em>"We didn't rely on brittle regex; we parsed the code down to AST nodes, letting us map function signatures, calls, and imports deterministically."</em>
+                    </div>
+                </div>
+
+                <div class="tech-item">
+                    <div class="tech-title">
+                        <span class="tech-name">BullMQ + Redis</span>
+                        <span class="badge badge-purple">Async Queues</span>
+                    </div>
+                    <p class="tech-rationale">
+                        <strong>Why over Direct HTTP?</strong> Repository cloning and AST parsing can take anywhere from 5 seconds to 2 minutes. Running this synchronously blocks the Express event loop and triggers HTTP 504 gateway timeouts. BullMQ offloads scans to isolated worker threads with exponential backoff retries.
+                    </p>
+                    <div class="tech-interview-tip">
+                        💬 <em>"HTTP handlers return 202 Accepted immediately with a Job ID. Background workers communicate real-time progress (0-100%) through MongoDB and BullMQ events."</em>
+                    </div>
+                </div>
+
+                <div class="tech-item">
+                    <div class="tech-title">
+                        <span class="tech-name">MongoDB (Mongoose)</span>
+                        <span class="badge badge-emerald">Primary Datastore</span>
+                    </div>
+                    <p class="tech-rationale">
+                        <strong>Why over PostgreSQL?</strong> Code graphs and AST symbol trees are deeply nested, semi-structured documents (arrays of functions, calls, imports, and logs). Document storage enables storing complete CodeGraph snapshots and job logs in a single native format.
+                    </p>
+                    <div class="tech-interview-tip">
+                        💬 <em>"We store summary metrics on the Project document for instant UI rendering, and full node/edge relational trees in a dedicated CodeGraph collection."</em>
+                    </div>
+                </div>
+
+                <div class="tech-item">
+                    <div class="tech-title">
+                        <span class="tech-name">Pinecone Vector Database</span>
+                        <span class="badge badge-amber">Vector Search</span>
+                    </div>
+                    <p class="tech-rationale">
+                        <strong>Why Namespaces?</strong> Multi-tenancy isolation. Each project's vector embeddings are stored in an isolated namespace (<code>project-${projectId}</code>). When a project is re-scanned, we can delete and rebuild the entire vector index in O(1) time without affecting other projects.
+                    </p>
+                    <div class="tech-interview-tip">
+                        💬 <em>"We isolate vectors by project namespace, preventing cross-tenant code leakage and ensuring atomic index resets on re-scans."</em>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: PHASE BY PHASE ENGINEERING -->
+        <section id="phase-1">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <span class="section-icon">🔐</span>
+                    <div>
+                        <h3 class="section-title">Phase 1 to Phase 5 Engineering Breakdown</h3>
+                        <p class="section-desc">What was built, how it works under the hood, and common pitfalls resolved.</p>
+                    </div>
+                </div>
+                <span class="badge badge-emerald">5 Phases Complete</span>
+            </div>
+
+            <!-- Phase 1 Card -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>Phase 1: Dual-Token JWT Authentication & Security</span>
+                    </div>
+                    <span class="badge badge-emerald">Completed</span>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    Implemented a secure authentication flow using <strong>short-lived Access Tokens (1 day)</strong> and <strong>long-lived Refresh Tokens (10 days)</strong> stored in HTTP-only cookies / DB.
+                </p>
+                <div style="background: rgba(0,0,0,0.3); padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 0.88rem;">
+                    <strong>Under the Hood:</strong>
+                    <ul style="padding-left: 20px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                        <li>Passwords hashed with <code>bcryptjs</code> (salt factor 10) inside a Mongoose <code>pre('save')</code> hook with <code>isModified('password')</code> guard.</li>
+                        <li>Auth middleware extracts bearer token, verifies signature, and normalizes <code>req.user._id</code> to prevent object/string mismatch bugs.</li>
+                        <li>Complete ESM architecture (<code>"type": "module"</code>) across the entire backend.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Phase 3 Card -->
+            <div class="glass-card" id="phase-3">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>Phase 3: Project Cockpit & GitHub Octokit Integration</span>
+                    </div>
+                    <span class="badge badge-emerald">Completed</span>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    Built project lifecycle management with strict <strong>IDOR (Insecure Direct Object Reference) prevention</strong> and automated GitHub integration via Octokit.
+                </p>
+                <div style="background: rgba(0,0,0,0.3); padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 0.88rem;">
+                    <strong>Under the Hood:</strong>
+                    <ul style="padding-left: 20px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                        <li>Ownership Authorization: Every project controller strictly verifies <code>project.owner.toString() === req.user._id.toString()</code> (403 Forbidden otherwise).</li>
+                        <li>GitHub Personal Access Token encrypted in User schema with <code>select: false</code> so it is never accidentally exposed in API responses.</li>
+                        <li>Octokit service fetches authenticated user repos, branch heads, and clone URLs.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Phase 4 Card -->
+            <div class="glass-card" id="phase-4">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>Phase 4: Distributed BullMQ Queues & Background Workers</span>
+                    </div>
+                    <span class="badge badge-emerald">Completed</span>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    Decoupled long-running repository scans from the HTTP server using Redis and BullMQ workers with comprehensive lifecycle state transitions.
+                </p>
+                <div style="background: rgba(0,0,0,0.3); padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 0.88rem;">
+                    <strong>Under the Hood:</strong>
+                    <ul style="padding-left: 20px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                        <li>Producer: <code>POST /api/scan/:projectId</code> checks for active duplicate scans (409 Conflict), writes a <code>Job</code> document in MongoDB, and enqueues BullMQ job (returns HTTP 202).</li>
+                        <li>Consumer: Dedicated worker process (<code>scanner.worker.js</code>) transitions project from <code>connected</code> ➔ <code>scanning</code> ➔ <code>indexed</code>.</li>
+                        <li>Failure Recovery: Captures stack traces, marks Job <code>failed</code> and Project <code>scan-failed</code>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Phase 5 Card -->
+            <div class="glass-card" id="phase-5">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>Phase 5: AST Parser, File Walker & Code Graph Engine</span>
+                    </div>
+                    <span class="badge badge-emerald">Completed</span>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    The brain of DevPilot: recursively crawls repositories, parses AST syntax trees, resolves canonical import paths, and constructs relational code graphs.
+                </p>
+                <div style="background: rgba(0,0,0,0.3); padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 0.88rem;">
+                    <strong>Under the Hood:</strong>
+                    <ul style="padding-left: 20px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                        <li><strong>File Walker (<code>fileWalker.service.js</code>)</strong>: Recursive crawler with ignore rules (<code>node_modules</code>, <code>.git</code>, lockfiles), 1MB security limit, and JS/TS extension filters.</li>
+                        <li><strong>AST Visitor (<code>ast.services.js</code>)</strong>: Uses Babel to extract function declarations, arrow functions inside higher-order wrappers (like <code>asyncHandler</code>), classes, params, imports, and call expressions.</li>
+                        <li><strong>Relative Path Resolver</strong>: Maps <code>../models/job.js</code> to canonical repo paths, handling extension omission (<code>.js</code>, <code>.ts</code>, <code>/index.js</code>) and separating npm packages from internal files.</li>
+                        <li><strong>Code Graph (<code>codeGraph.service.js</code>)</strong>: Produces 4 node types (<code>file</code>, <code>function</code>, <code>class</code>, <code>package</code>) and 3 edge types (<code>defines</code>, <code>imports</code>, <code>calls</code>).</li>
+                        <li><strong>Live Verification</strong>: Tested on server source; indexed <strong>96 nodes and 192 edges</strong> in under 5 seconds!</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: INTERVIEW QUESTIONS & MODEL ANSWERS -->
+        <section id="interview-qa">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <span class="section-icon">🎯</span>
+                    <div>
+                        <h3 class="section-title">Master Interview Questions & Model Answers</h3>
+                        <p class="section-desc">Interactive flashcards covering system design, AST compilation, security, and RAG architectures.</p>
+                    </div>
+                </div>
+                <span class="badge badge-amber">Click to Expand Answers</span>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="search-bar-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="qaSearch" class="search-input" placeholder="Search interview questions by keyword (e.g. BullMQ, AST, JWT, security, scaling)...">
+            </div>
+
+            <div class="filter-tags" id="filterTags">
+                <button class="filter-tag active" data-filter="all">All Topics (10)</button>
+                <button class="filter-tag" data-filter="sysdesign">System Design</button>
+                <button class="filter-tag" data-filter="ast">Compiler & AST</button>
+                <button class="filter-tag" data-filter="security">Auth & Security</button>
+                <button class="filter-tag" data-filter="rag">RAG & Vector DB</button>
+            </div>
+
+            <!-- Q&A List -->
+            <div id="qaList">
+
+                <!-- Q1 -->
+                <div class="qa-card" data-category="sysdesign">
+                    <div class="qa-header">
+                        <div class="qa-header-left">
+                            <span class="badge badge-purple">System Design</span>
+                            <span class="qa-question">Why did you use BullMQ and Redis instead of handling scans directly in the Express request?</span>
+                        </div>
+                        <span class="qa-toggle">▼</span>
+                    </div>
+                    <div class="qa-body">
+                        <p>
+                            Repository analysis involves file I/O, git shallow cloning, and CPU-intensive AST parsing. In Node.js, the event loop is single-threaded. If an Express route performed AST parsing synchronously:
+                        </p>
+                        <ol style="padding-left: 20px; margin: 8px 0; display: flex; flex-direction: column; gap: 4px;">
+                            <li>The event loop would be blocked, freezing all other incoming API requests for all users.</li>
+                            <li>HTTP client requests would hit standard 30-60 second timeout thresholds (504 Gateway Timeout).</li>
+                            <li>A worker crash would take down the entire web server.</li>
+                        </ol>
+                        <p>
+                            By using BullMQ, we adopt the <strong>Asynchronous Request-Reply Pattern</strong>: the API returns <code>HTTP 202 Accepted</code> immediately with a Job ID. Background worker processes handle execution, publish progress events, and automatically retry on transient failures.
+                        </p>
+                        <div class="qa-followup">
+                            💡 <strong>Interviewer Follow-up:</strong> <em>"What happens if Redis goes down while a scan is running?"</em><br>
+                            <strong>Answer:</strong> BullMQ uses Redis persistence (RDB/AOF). Jobs in progress become stalled; when the worker restarts or reconnects, BullMQ detects stalled jobs and either moves them to the failed queue or retries them based on the <code>attempts</code> policy.
+                        </div>
+                        <div class="qa-buzzwords">
+                            <span class="buzzword">Event Loop Non-blocking</span>
+                            <span class="buzzword">HTTP 202 Accepted</span>
+                            <span class="buzzword">Exponential Backoff</span>
+                            <span class="buzzword">Worker Decoupling</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Q2 -->
+                <div class="qa-card" data-category="ast">
+                    <div class="qa-header">
+                        <div class="qa-header-left">
+                            <span class="badge badge-cyan">Compiler & AST</span>
+                            <span class="qa-question">Why did you build an AST parser instead of using regular expressions or LangChain's splitters?</span>
+                        </div>
+                        <span class="qa-toggle">▼</span>
+                    </div>
+                    <div class="qa-body">
+                        <p>
+                            Regular expressions cannot parse context-free grammars (Chomsky hierarchy). Code has nested structures: closures, callbacks, higher-order functions (e.g. <code>asyncHandler(async (req, res) => {})</code>), and template strings with embedded brackets.
+                        </p>
+                        <p>
+                            LangChain's <code>RecursiveCharacterTextSplitter.fromLanguage()</code> relies on regex heuristics like <code>\nfunction </code>. In modern codebases:
+                        </p>
+                        <ul style="padding-left: 20px; margin: 8px 0; display: flex; flex-direction: column; gap: 4px;">
+                            <li>It fails to identify functions wrapped in decorators or higher-order functions.</li>
+                            <li>It cannot extract parameter names (<code>params: ['req', 'res']</code>) or determine if a function is asynchronous.</li>
+                            <li>It slices through blocks, producing syntax errors in chunks.</li>
+                        </ul>
+                        <p>
+                            By utilizing Babel's AST parser (<code>@babel/parser</code> + <code>@babel/traverse</code>), we generate a true Abstract Syntax Tree, extracting exact 1-indexed line coordinates (<code>startLine</code>, <code>endLine</code>) that align 1-to-1 with our Code Graph nodes and Pinecone vector IDs.
+                        </p>
+                        <div class="qa-followup">
+                            💡 <strong>Interviewer Follow-up:</strong> <em>"How do you handle JSX and TypeScript files?"</em><br>
+                            <strong>Answer:</strong> In <code>ast.services.js</code>, we configure Babel parser plugins: <code>plugins: ['jsx', 'typescript']</code>. This enables parsing both standard JavaScript and TypeScript/React syntax trees seamlessly.
+                        </div>
+                        <div class="qa-buzzwords">
+                            <span class="buzzword">Abstract Syntax Tree</span>
+                            <span class="buzzword">Visitor Pattern</span>
+                            <span class="buzzword">Higher-Order Wrappers</span>
+                            <span class="buzzword">Deterministic Slicing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Q3 -->
+                <div class="qa-card" data-category="security">
+                    <div class="qa-header">
+                        <div class="qa-header-left">
+                            <span class="badge badge-rose">Security</span>
+                            <span class="qa-question">How does DevPilot protect against IDOR (Insecure Direct Object Reference) and unauthorized repository access?</span>
+                        </div>
+                        <span class="qa-toggle">▼</span>
+                    </div>
+                    <div class="qa-body">
+                        <p>
+                            We implement multi-layered authorization across all controllers:
+                        </p>
+                        <ol style="padding-left: 20px; margin: 8px 0; display: flex; flex-direction: column; gap: 4px;">
+                            <li><strong>JWT Verification Middleware</strong>: Extracts the bearer token, verifies signature with <code>ACCESS_TOKEN_SECRET</code>, and attaches the authenticated user document to <code>req.user</code>.</li>
+                            <li><strong>Resource Ownership Enforcement</strong>: Every project route (<code>GET</code>, <code>PUT</code>, <code>DELETE</code>, <code>POST /scan</code>, <code>GET /graph</code>) looks up the project and strictly validates:
+                                <pre>if (project.owner.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You do not have permission to access this project");
+}</pre>
+                            </li>
+                            <li><strong>Credential Redaction</strong>: Sensitive credentials like <code>githubAccessToken</code> are configured with <code>select: false</code> in Mongoose so they are never leaked in API payloads or serialized to client responses.</li>
+                        </ol>
+                        <div class="qa-followup">
+                            💡 <strong>Interviewer Follow-up:</strong> <em>"How do you clone private repositories without exposing the token in process logs?"</em><br>
+                            <strong>Answer:</strong> In <code>repoCloner.service.js</code>, if a git clone error occurs, we sanitize the error message with a regex replacer (<code>replace(/https:\/\/[^@]+@github\.com/g, "https://***@github.com")</code>) before logging or throwing.
+                        </div>
+                        <div class="qa-buzzwords">
+                            <span class="buzzword">IDOR Prevention</span>
+                            <span class="buzzword">Mongoose select: false</span>
+                            <span class="buzzword">Credential Sanitization</span>
+                            <span class="buzzword">403 Forbidden</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Q4 -->
+                <div class="qa-card" data-category="rag">
+                    <div class="qa-header">
+                        <div class="qa-header-left">
+                            <span class="badge badge-amber">RAG & Vector DB</span>
+                            <span class="qa-question">What is AST-Aware Chunking and why is it superior for code embeddings?</span>
+                        </div>
+                        <span class="qa-toggle">▼</span>
+                    </div>
+                    <div class="qa-body">
+                        <p>
+                            In standard document RAG, sentences and paragraphs have natural semantic boundaries. In code, the semantic unit of computation is the <strong>function</strong> or the <strong>class</strong>.
+                        </p>
+                        <p>
+                            If an embedding chunk cuts off halfway through a function body:
+                        </p>
+                        <ul style="padding-left: 20px; margin: 8px 0; display: flex; flex-direction: column; gap: 4px;">
+                            <li>The vector representation loses the return statement, the closing logic, and the parameter context.</li>
+                            <li>The cosine similarity score against natural language questions drops drastically.</li>
+                        </ul>
+                        <p>
+                            <strong>DevPilot's AST-Aware Chunking:</strong>
+                        </p>
+                        <ol style="padding-left: 20px; margin: 8px 0; display: flex; flex-direction: column; gap: 4px;">
+                            <li>Slices along verified AST function/class line boundaries (<code>startLine</code> to <code>endLine</code>).</li>
+                            <li>Prepends a standardized <strong>Context Banner</strong> (File, Symbol Name, Parameters, Async status) that gives the vector model rich semantic breadcrumbs.</li>
+                            <li>Assigns deterministic chunk IDs that match the MongoDB Code Graph nodes for Hybrid Retrieval.</li>
+                        </ol>
+                        <div class="qa-buzzwords">
+                            <span class="buzzword">Semantic Units</span>
+                            <span class="buzzword">Context Breadcrumbs</span>
+                            <span class="buzzword">Cosine Similarity</span>
+                            <span class="buzzword">Hybrid RAG</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Q5 -->
+                <div class="qa-card" data-category="sysdesign">
+                    <div class="qa-header">
+                        <div class="qa-header-left">
+                            <span class="badge badge-purple">System Design</span>
+                            <span class="qa-question">How would you scale DevPilot to handle 10,000 repositories concurrently?</span>
+                        </div>
+                        <span class="qa-toggle">▼</span>
+                    </div>
+                    <div class="qa-body">
+                        <p>
+                            Scaling DevPilot from a prototype to a high-throughput enterprise platform requires addressing three primary bottlenecks:
+                        </p>
+                        <ol style="padding-left: 20px; margin: 8px 0; display: flex; flex-direction: column; gap: 6px;">
+                            <li><strong>Horizontal Worker Scaling (Kubernetes / KEDA)</strong>:
+                                Decouple the worker into a separate container image. Use KEDA (Kubernetes Event-driven Autoscaling) to scale worker pods up or down based on the BullMQ queue depth.
+                            </li>
+                            <li><strong>Distributed Redis Cluster</strong>:
+                                Replace single-node Redis with Redis Cluster or AWS ElastiCache with read replicas to handle thousands of queue events per second.
+                            </li>
+                            <li><strong>Ephemeral Sandboxed Execution</strong>:
+                                Never run git clone or test execution directly on the host VM. Spin up ephemeral Docker containers or gVisor microVMs (Phase 8) to isolate malicious code and protect system disk space.
+                            </li>
+                            <li><strong>Vector DB Indexing Batching</strong>:
+                                Queue Pinecone vector upserts in batches of 100 vectors with rate-limit backoffs to avoid hitting Pinecone API rate limits during massive scans.
+                            </li>
+                        </ol>
+                        <div class="qa-buzzwords">
+                            <span class="buzzword">KEDA Autoscaling</span>
+                            <span class="buzzword">Redis Cluster</span>
+                            <span class="buzzword">gVisor MicroVMs</span>
+                            <span class="buzzword">Batch Upserting</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECTION 5: LIMITATIONS & EDGE CASES -->
+        <section id="limitations">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <span class="section-icon">⚖️</span>
+                    <div>
+                        <h3 class="section-title">Architectural Limitations & Trade-offs</h3>
+                        <p class="section-desc">Honest engineering trade-offs that show senior architectural maturity in interviews.</p>
+                    </div>
+                </div>
+                <span class="badge badge-rose">Senior Talking Points</span>
+            </div>
+
+            <div class="limitations-grid">
+                <div class="limitation-card">
+                    <div class="limitation-title">
+                        <span>⚠️ Dynamic Runtime Imports</span>
+                    </div>
+                    <p class="limitation-desc">
+                        Static AST analysis cannot resolve dynamic runtime module paths like <code>import(`./plugins/${pluginName}`)</code> because the variable value only exists during runtime execution.
+                    </p>
+                    <div class="limitation-solution">
+                        💡 <strong>Solution / Defense:</strong> <em>"We flag dynamic import expressions as external or unresolved nodes, and supplement them during test execution analysis."</em>
+                    </div>
+                </div>
+
+                <div class="limitation-card">
+                    <div class="limitation-title">
+                        <span>⚠️ Large Monorepo Memory Limits</span>
+                    </div>
+                    <p class="limitation-desc">
+                        Parsing a 500,000-line monorepo in a single Node process can consume substantial RAM and hit Node's default heap limit (1.4GB).
+                    </p>
+                    <div class="limitation-solution">
+                        💡 <strong>Solution / Defense:</strong> <em>"We enforce a 1MB file cap in FileWalker and process files in sequential worker streams rather than loading all ASTs into RAM simultaneously."</em>
+                    </div>
+                </div>
+
+                <div class="limitation-card">
+                    <div class="limitation-title">
+                        <span>⚠️ Multi-Language Parser Support</span>
+                    </div>
+                    <p class="limitation-desc">
+                        Babel is specialized for JavaScript and TypeScript. Scanning Python, Go, or Rust codebases requires language-specific parsers.
+                    </p>
+                    <div class="limitation-solution">
+                        💡 <strong>Solution / Defense:</strong> <em>"In future iterations, we can abstract the parser interface to Tree-sitter, which provides unified C-bindings for 40+ programming languages."</em>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: QUICK CHEAT SHEET -->
+        <section id="cheat-sheet">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <span class="section-icon">📋</span>
+                    <div>
+                        <h3 class="section-title">Interview Quick Cheat Sheet</h3>
+                        <p class="section-desc">Key terminal commands, test workflows, and quick-fire metrics for interview day.</p>
+                    </div>
+                </div>
+                <span class="badge badge-cyan">Cheat Sheet</span>
+            </div>
+
+            <div class="glass-card">
+                <h4 style="margin-bottom: 12px; color: #fff;">⚡ Key Project Metrics to Quote in Interviews</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; font-size: 0.9rem; color: #cbd5e1;">
+                    <div>• <strong>AST Nodes Parsed</strong>: 96 nodes (files, functions, classes, packages)</div>
+                    <div>• <strong>Relational Edges</strong>: 192 edges (defines, imports, calls)</div>
+                    <div>• <strong>Scan Execution Time</strong>: Under 5 seconds on 29 server source files</div>
+                    <div>• <strong>Concurrency Limit</strong>: 2 parallel scan jobs per worker instance</div>
+                    <div>• <strong>Queue Retry Policy</strong>: 3 attempts with 5,000ms exponential backoff</div>
+                    <div>• <strong>Auth Token Expiry</strong>: 1-day Access Token / 10-day Refresh Token</div>
+                </div>
+
+                <h4 style="margin: 20px 0 10px; color: #fff;">💻 Key Test & Execution Commands</h4>
+                <pre><code># Start Server (Development)
+cd server && npm run dev
+
+# Start BullMQ Scanner Background Worker
+cd server && npm run worker
+
+# Run AST Code Graph End-to-End Worker Test
+cd server && node test-phase5-worker.js
+
+# Test Graph API Retrieval Route
+cd server && node test-phase5-route.js</code></pre>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- INTERACTIVE JAVASCRIPT LOGIC -->
+    <script>
+        // 1. Accordion Q&A Toggle
+        document.querySelectorAll('.qa-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const card = header.parentElement;
+                card.classList.toggle('open');
+            });
+        });
+
+        // 2. Search Filter for Interview Questions
+        const searchInput = document.getElementById('qaSearch');
+        const qaCards = document.querySelectorAll('.qa-card');
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            qaCards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // 3. Category Filter Buttons
+        const filterButtons = document.querySelectorAll('.filter-tag');
+
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const filter = btn.dataset.filter;
+                qaCards.forEach(card => {
+                    if (filter === 'all' || card.dataset.category === filter) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // 4. Smooth Scrolling Active State on Sidebar
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('section, .hero');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 120) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

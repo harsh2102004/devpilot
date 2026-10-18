@@ -4,6 +4,8 @@
 
 DevPilot is an advanced developer productivity platform that connects to GitHub repositories to inspect, understand, test, debug, and safely propose fixes for codebases. Unlike generic AI chatbots that only receive small code snippets in a prompt, DevPilot analyzes the repository as an interconnected system of files, functions, AST nodes, imports, and execution relationships.
 
+> 📚 **Interview & Architecture Preparation Hub**: Explore our interactive [DevPilot Architecture & Interview Guide](docs/index.html) with system design diagrams, technical trade-offs, and curated Q&A flashcards!
+
 ---
 
 ## 🌟 Key Architecture & Highlights
