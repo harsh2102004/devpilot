@@ -17,6 +17,7 @@
     "@babel/parser": "^8.0.7",
     "@babel/traverse": "^8.0.7",
     "@octokit/rest": "^22.0.1",
+    "@pinecone-database/pinecone": "^9.0.0",
     "bcryptjs": "^3.0.3",
     "bullmq": "^6.3.8",
     "cors": "^2.8.6",
