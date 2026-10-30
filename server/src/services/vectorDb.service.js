@@ -233,6 +233,35 @@ export const searchCodebase = async ({
     }));
 };
 
+/**
+ * Fetches specific vector records by chunk IDs from the project's isolated namespace.
+ * @param {string} projectId
+ * @param {string[]} ids
+ * @returns {Promise<Array<object>>} Formatted chunk objects with metadata
+ */
+export const fetchVectorsByIds = async (projectId, ids) => {
+    if (!projectId || !Array.isArray(ids) || ids.length === 0) return [];
+    try {
+        const projectIndex = await getProjectIndex(projectId);
+        const fetchRes = await projectIndex.fetch({ ids });
+        const records = fetchRes.records || {};
+        return Object.values(records).map((rec) => ({
+            chunkId: rec.id,
+            filePath: rec.metadata?.filePath || "",
+            symbolName: rec.metadata?.symbolName || "",
+            chunkType: rec.metadata?.chunkType || "",
+            startLine: rec.metadata?.startLine || 0,
+            endLine: rec.metadata?.endLine || 0,
+            lineCount: rec.metadata?.lineCount || 0,
+            content: rec.metadata?.content || "",
+        }));
+    } catch (err) {
+        console.warn(`[Pinecone] Warning fetching vector records by IDs: ${err.message}`);
+        return [];
+    }
+};
+
+
 export default {
     DEFAULT_INDEX_NAME,
     VECTOR_DIMENSIONS,
@@ -245,5 +274,7 @@ export default {
     deleteProjectVectors,
     queryProjectVectors,
     searchCodebase,
+    fetchVectorsByIds,
 };
+
 
