@@ -7,8 +7,10 @@ import {
   Radio, 
   Clock, 
   Terminal,
+  Sparkles,
   Loader2
 } from 'lucide-react';
+
 import './ProjectCard.css';
 
 const ProjectCard = ({ project, onDelete, onOpen }) => {
@@ -118,11 +120,12 @@ const ProjectCard = ({ project, onDelete, onOpen }) => {
       {/* Footer Action */}
       <div className="project-card-footer">
         <button 
-          className="btn btn-secondary btn-block project-launch-btn"
+          className="btn btn-primary btn-block project-launch-btn"
           onClick={() => onOpen(project)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
         >
-          <Terminal size={15} />
-          <span>Open Cockpit</span>
+          <Sparkles size={15} />
+          <span>Chat with Codebase</span>
         </button>
       </div>
     </div>
@@ -130,3 +133,4 @@ const ProjectCard = ({ project, onDelete, onOpen }) => {
 };
 
 export default ProjectCard;
+

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectCard from '../components/ProjectCard';
+import CodebaseChatDrawer from '../components/CodebaseChatDrawer';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -25,6 +26,8 @@ const Dashboard = () => {
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedChatProject, setSelectedChatProject] = useState(null);
+
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -64,11 +67,11 @@ const Dashboard = () => {
     setProjects((prev) => prev.filter((p) => p._id !== projectId));
   };
 
-  // Handle open project cockpit
+  // Handle open project cockpit / chat
   const handleOpenProject = (project) => {
-    // In Phase 4/5 this navigates to the project cockpit or scanner view
-    alert(`Opening cockpit for "${project.name}" (ID: ${project._id})\nStatus: ${project.status}\nGitHub integration & scanner pipeline starting next!`);
+    setSelectedChatProject(project);
   };
+
 
   if (authLoading) {
     return (
@@ -282,8 +285,16 @@ const Dashboard = () => {
         onProjectCreated={handleProjectCreated}
       />
 
+      {/* Codebase AI Chat Drawer */}
+      <CodebaseChatDrawer
+        isOpen={Boolean(selectedChatProject)}
+        onClose={() => setSelectedChatProject(null)}
+        project={selectedChatProject}
+      />
+
     </div>
   );
 };
+
 
 export default Dashboard;
