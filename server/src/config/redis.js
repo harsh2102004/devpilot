@@ -3,11 +3,14 @@ import Redis from "ioredis";
 const baseOptions = {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
+    lazyConnect: true,
     retryStrategy(times) {
+        if (times > 5) return null;
         const delay = Math.min(times * 200, 3000);
         return delay;
     },
 };
+
 
 const redisConnection = process.env.REDIS_URL
     ? new Redis(process.env.REDIS_URL, baseOptions)
@@ -27,8 +30,11 @@ redisConnection.on("ready", () => {
 });
 
 redisConnection.on("error", (err) => {
-    console.error("[Redis] Connection error:", err.message);
+    if (err.code !== "ECONNREFUSED") {
+        console.error("[Redis] Connection error:", err.message);
+    }
 });
+
 
 redisConnection.on("close", () => {
     console.warn("[Redis] Connection closed, reconnecting...");
