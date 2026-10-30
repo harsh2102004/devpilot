@@ -38,6 +38,11 @@ const projectSchema = new mongoose.Schema({
         functionsFound: { type: Number, default: 0 },
         classesFound: { type: Number, default: 0 },
     },
+    vectorStats: {
+        totalChunksIndexed: { type: Number, default: 0 },
+        vectorNamespace: { type: String, default: "" },
+        lastIndexedAt: { type: Date, default: null },
+    },
     codeGraph: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'CodeGraph',

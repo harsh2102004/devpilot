@@ -5,6 +5,7 @@ import { Project } from "../models/project.js";
 import { Job } from "../models/job.js";
 import { CodeGraph } from "../models/codeGraph.js";
 import { addScanJob } from "../queues/scan.queue.js";
+import { searchCodebase } from "../services/vectorDb.service.js";
 
 // Start repository scan
 const startScan = asyncHandler(async (req, res) => {
@@ -121,9 +122,52 @@ const getProjectCodeGraph = asyncHandler(async (req, res) => {
     );
 });
 
+// Semantic search within project codebase vectors
+const searchProjectCode = asyncHandler(async (req, res) => {
+    const { projectId } = req.params;
+    const { query, topK = 5, filter } = req.body;
+
+    if (!query || typeof query !== "string" || !query.trim()) {
+        throw new ApiError(400, "Search query is required");
+    }
+
+    const project = await Project.findById(projectId);
+
+    if (!project) {
+        throw new ApiError(404, "Project not found");
+    }
+
+    if (project.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You do not have permission to search this project");
+    }
+
+    const limit = Math.min(Math.max(parseInt(topK, 10) || 5, 1), 20);
+    const results = await searchCodebase({
+        projectId: project._id.toString(),
+        query: query.trim(),
+        topK: limit,
+        filter,
+    });
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            {
+                projectId: project._id,
+                query: query.trim(),
+                totalMatches: results.length,
+                matches: results,
+            },
+            "Semantic code search executed successfully"
+        )
+    );
+});
+
 export {
     startScan,
     getjobstatus,
     getprojectscanhistory,
-    getProjectCodeGraph
+    getProjectCodeGraph,
+    searchProjectCode,
 };
+

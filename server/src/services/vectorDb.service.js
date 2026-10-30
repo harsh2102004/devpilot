@@ -181,6 +181,58 @@ export const queryProjectVectors = async ({
     return queryResponse.matches || [];
 };
 
+/**
+ * Executes natural language semantic code search across a project's isolated Pinecone vector index.
+ * Generates an embedding for the user's natural language question/query and retrieves
+ * the most semantically relevant code chunks bounded by syntax definitions.
+ *
+ * @param {object} options
+ * @param {string} options.projectId - Target project ID
+ * @param {string} options.query - Natural language query or code search query
+ * @param {number} [options.topK=5] - Maximum number of code chunks to retrieve
+ * @param {object} [options.filter] - Optional metadata filter (e.g. { chunkType: "function" })
+ * @returns {Promise<Array<object>>} Ranked list of matching code chunks with similarity score and breadcrumbs
+ */
+export const searchCodebase = async ({
+    projectId,
+    query,
+    topK = 5,
+    filter = undefined,
+}) => {
+    if (!projectId) {
+        throw new Error("projectId is required for semantic code search");
+    }
+    if (!query || typeof query !== "string" || !query.trim()) {
+        throw new Error("Query text is required for semantic code search");
+    }
+
+    const { generateEmbedding } = await import("./embedding.service.js");
+
+    // 1. Generate 3072-dimensional vector embedding for the search query
+    const queryVector = await generateEmbedding(query.trim());
+
+    // 2. Query project's isolated Pinecone namespace
+    const matches = await queryProjectVectors({
+        projectId,
+        vector: queryVector,
+        topK,
+        filter,
+    });
+
+    // 3. Format and return ranked code chunks with similarity score and metadata
+    return (matches || []).map((match) => ({
+        score: match.score,
+        chunkId: match.id,
+        filePath: match.metadata?.filePath || "",
+        symbolName: match.metadata?.symbolName || "",
+        chunkType: match.metadata?.chunkType || "",
+        startLine: match.metadata?.startLine || 0,
+        endLine: match.metadata?.endLine || 0,
+        lineCount: match.metadata?.lineCount || 0,
+        content: match.metadata?.content || "",
+    }));
+};
+
 export default {
     DEFAULT_INDEX_NAME,
     VECTOR_DIMENSIONS,
@@ -192,4 +244,6 @@ export default {
     upsertCodeChunks,
     deleteProjectVectors,
     queryProjectVectors,
+    searchCodebase,
 };
+

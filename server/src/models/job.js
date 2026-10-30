@@ -86,6 +86,10 @@ const jobSchema = new mongoose.Schema(
                 default: null,
             },
         },
+        vectorStats: {
+            totalChunksIndexed: { type: Number, default: 0 },
+            vectorNamespace: { type: String, default: "" },
+        },
     },
     { timestamps: true }
 );
@@ -105,17 +109,20 @@ jobSchema.methods.updateProgress = async function (percent, message) {
     return this.save();
 };
 
-jobSchema.methods.markCompleted = async function (codeGraphData) {
+jobSchema.methods.markCompleted = async function (data = {}) {
     this.status = "completed";
     this.progress = 100;
     this.completedAt = new Date();
-    if (codeGraphData?.stats) {
+    if (data?.stats) {
         this.codeGraph = {
-            stats: codeGraphData.stats,
-            nodesCount: codeGraphData.nodes?.length || codeGraphData.stats.totalNodes || 0,
-            edgesCount: codeGraphData.edges?.length || codeGraphData.stats.totalEdges || 0,
-            graphId: codeGraphData.graphId || codeGraphData._id || null,
+            stats: data.stats,
+            nodesCount: data.nodes?.length || data.stats.totalNodes || 0,
+            edgesCount: data.edges?.length || data.stats.totalEdges || 0,
+            graphId: data.graphId || data._id || null,
         };
+    }
+    if (data?.vectorStats) {
+        this.vectorStats = data.vectorStats;
     }
     this.logs.push({ level: "success", message: "Scan completed successfully" });
     return this.save();
