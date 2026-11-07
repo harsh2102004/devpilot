@@ -84,3 +84,4 @@ export default {
     registerSchema,
     loginSchema,
 };
+
