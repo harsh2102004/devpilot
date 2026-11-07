@@ -19,6 +19,7 @@ import {
   X,
   Loader2,
 } from 'lucide-react';
+import PatchReviewModal from './PatchReviewModal';
 import './TestCockpitModal.css';
 
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -35,6 +36,11 @@ const TestCockpitModal = ({
   const [historicalRuns, setHistoricalRuns] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  
+  // Autonomous Fix Loop State (Phase 9C/9D)
+  const [isFixing, setIsFixing] = useState(false);
+  const [activeFixIndex, setActiveFixIndex] = useState(null);
+  const [activeVerificationData, setActiveVerificationData] = useState(null);
   
   // Custom execution options
   const [customCommand, setCustomCommand] = useState('');
@@ -189,30 +195,36 @@ const TestCockpitModal = ({
     }));
   };
 
-  // Ask DevPilot AI to fix specific failure (Section 9 Page 11 of pilot.pdf)
-  const handleAskFix = (failure) => {
-    const prompt = `DevPilot, please inspect and fix the failing test in project "${project.name}".
+  // Trigger Autonomous Sandbox Verification Loop and Review Patch (Phase 9C/9D)
+  const handleAskFix = async (failure, index) => {
+    try {
+      setIsFixing(true);
+      setActiveFixIndex(index);
+      setErrorMsg('');
 
-### 🔴 Failing Test:
-- **Test Title**: ${failure.testTitle}
-- **Suite**: ${failure.suiteName || 'N/A'}
-- **Culprit File**: \`${failure.filePath}\` (Line ${failure.line || 'unknown'})
-- **Error**: ${failure.errorName}: ${failure.errorMessage}
+      const res = await axios.post(`${API_BASE_URL}/test/${project._id}/verify-fix`, {
+        testRunId: currentTestRun?._id,
+        customFailure: failure,
+        failureIndex: index,
+        maxAttempts: 3,
+        preferDocker,
+      });
 
-### 📄 Code Snippet:
-\`\`\`
-${failure.codeSnippet || 'No snippet available'}
-\`\`\`
-
-### 🧵 Stack Trace:
-\`\`\`
-${failure.stackTrace || 'No stack trace captured'}
-\`\`\`
-
-Please explain what caused this assertion to fail and generate a minimal, targeted patch to resolve the issue!`;
-
-    if (onAskAiToFix) {
-      onAskAiToFix(failure, prompt);
+      if (res.data?.data?.verifiedPatch) {
+        setActiveVerificationData(res.data.data);
+      } else {
+        setErrorMsg('Autonomous fix could not be verified automatically after 3 attempts.');
+      }
+    } catch (err) {
+      console.warn('Fix loop error, falling back to chat guidance:', err);
+      if (onAskAiToFix) {
+        onAskAiToFix(failure);
+      } else {
+        setErrorMsg(err.response?.data?.message || 'Failed to execute autonomous fix loop.');
+      }
+    } finally {
+      setIsFixing(false);
+      setActiveFixIndex(null);
     }
   };
 
@@ -414,14 +426,24 @@ Please explain what caused this assertion to fail and generate a minimal, target
                           <div className="failure-actions">
                             <button
                               className="btn-ask-ai"
+                              disabled={isFixing}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleAskFix(fail);
+                                handleAskFix(fail, idx);
                               }}
-                              title="Send diagnostics to AI Codebase Chat to fix"
+                              title="Synthesize and verify candidate fix in sandbox"
                             >
-                              <Sparkles size={14} />
-                              <span>Fix with AI</span>
+                              {isFixing && activeFixIndex === idx ? (
+                                <>
+                                  <Loader2 size={14} className="spin-icon" />
+                                  <span>Fixing...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles size={14} />
+                                  <span>Fix with AI</span>
+                                </>
+                              )}
                             </button>
                             <button className="expand-btn">
                               {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -572,6 +594,23 @@ Please explain what caused this assertion to fail and generate a minimal, target
           )}
         </div>
       </div>
+
+      {/* Sub-Phase 9D: Human-in-the-Loop Patch Review Modal */}
+      {activeVerificationData && (
+        <PatchReviewModal
+          isOpen={Boolean(activeVerificationData)}
+          onClose={() => setActiveVerificationData(null)}
+          project={project}
+          patch={activeVerificationData.verifiedPatch}
+          verificationReport={activeVerificationData}
+          onApproveAndOpenPR={(prData) => {
+            console.log('Approve & Open PR triggered:', prData);
+            alert(`PR Approval registered for branch: ${prData.branchName}! Sub-Phase 9E will automate GitHub PR creation.`);
+            setActiveVerificationData(null);
+          }}
+          onDiscard={() => setActiveVerificationData(null)}
+        />
+      )}
     </div>
   );
 };
