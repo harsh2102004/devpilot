@@ -16,6 +16,8 @@ import { TEST_QUEUE_NAME } from "../queues/test.queue.js";
 import { Job } from "../models/job.js";
 import { Project } from "../models/project.js";
 import { User } from "../models/User.js";
+import { TestRun } from "../models/testRun.js";
+import { parseTestOutput } from "../services/testParser.service.js";
 import {
     executeInSandbox,
     detectProjectEnvironment,
@@ -50,7 +52,19 @@ export const processTestJob = async (bullJob) => {
     const isDbConnected = mongoose.connection.readyState === 1;
 
     let jobDoc = null;
+    let testRunDoc = null;
+
     if (isDbConnected) {
+        if (testRunId) {
+            testRunDoc = await TestRun.findById(testRunId);
+        }
+        if (!testRunDoc) {
+            testRunDoc = await TestRun.findOne({
+                projectId,
+                status: { $in: ["queued", "running"] },
+            }).sort({ createdAt: -1 });
+        }
+
         if (jobRecordId) {
             jobDoc = await Job.findById(jobRecordId);
         }
@@ -86,6 +100,10 @@ export const processTestJob = async (bullJob) => {
         if (jobDoc) {
             jobDoc.bullJobId = bullJob.id || "";
             await jobDoc.markActive();
+        }
+        if (testRunDoc) {
+            testRunDoc.jobId = bullJob.id || testRunDoc.jobId || "";
+            await testRunDoc.markRunning();
         }
 
         // Determine repoUrl and repoBranch from project if not directly supplied
@@ -160,43 +178,78 @@ export const processTestJob = async (bullJob) => {
             `Sandbox execution completed in ${executionResult.durationMs}ms (exitCode: ${executionResult.exitCode}, environment: ${executionResult.environment})`
         );
 
+        // Parse test output for structured metrics and culprit failure traces
+        const parsedReport = parseTestOutput({
+            rawOutput: executionResult.output,
+            runner: envInfo.runner,
+            exitCode: executionResult.exitCode,
+            durationMs: executionResult.durationMs,
+        });
+
         const summaryPayload = {
             exitCode: executionResult.exitCode,
             durationMs: executionResult.durationMs,
             timedOut: executionResult.timedOut,
             environment: executionResult.environment,
             runtime: envInfo.runtime,
-            runner: envInfo.runner,
+            runner: parsedReport.runner,
             testCommand: resolvedCommand,
+            total: parsedReport.summary.total,
+            passed: parsedReport.summary.passed,
+            failed: parsedReport.summary.failed,
+            skipped: parsedReport.summary.skipped,
         };
 
         if (executionResult.success) {
-            await logStep(100, `✅ Test suite passed successfully! (exit code 0)`, "success");
+            await logStep(
+                100,
+                `✅ Test suite passed! (${parsedReport.summary.passed}/${parsedReport.summary.total} tests passed in ${parsedReport.summary.durationMs}ms)`,
+                "success"
+            );
             if (jobDoc) {
                 await jobDoc.markCompleted(summaryPayload);
             }
         } else {
             const failReason = executionResult.timedOut
                 ? `Test execution timed out after ${timeoutMs}ms`
-                : `Test suite failed with exit code ${executionResult.exitCode}`;
+                : `Test suite failed (${parsedReport.failures.length} failures, exit code ${executionResult.exitCode})`;
             await logStep(100, `❌ ${failReason}`, "error");
             if (jobDoc) {
                 await jobDoc.markFailed(failReason);
             }
         }
 
+        // Persist structured test run report in MongoDB
+        if (testRunDoc) {
+            await testRunDoc.markFinished({
+                success: executionResult.success,
+                timedOut: executionResult.timedOut,
+                summary: parsedReport.summary,
+                failures: parsedReport.failures,
+                rawOutput: executionResult.output,
+                environment: executionResult.environment,
+                runtime: envInfo.runtime,
+                runner: parsedReport.runner,
+            });
+        }
+
         return {
             ...executionResult,
             runtime: envInfo.runtime,
-            runner: envInfo.runner,
+            runner: parsedReport.runner,
+            summary: parsedReport.summary,
+            failures: parsedReport.failures,
             testCommand: resolvedCommand,
             projectId,
-            testRunId,
+            testRunId: testRunDoc?._id || testRunId,
         };
     } catch (err) {
         console.error(`[TestWorker] Error executing test job ${bullJob.id}:`, err);
         if (jobDoc) {
             await jobDoc.markFailed(err.message);
+        }
+        if (testRunDoc) {
+            await testRunDoc.markError(err.message);
         }
         throw err;
     } finally {
