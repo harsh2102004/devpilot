@@ -1,0 +1,84 @@
+name: DevPilot CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  client-check:
+    name: Client Lint & Build (oxlint + Vite)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install Client Dependencies
+        run: cd client && npm ci
+
+      - name: Run oxlint Static Analysis
+        run: cd client && npm run lint
+
+      - name: Run Vite Production Build
+        run: cd client && npm run build
+
+  server-test:
+    name: Server Automated Tests (node:test + supertest)
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli -a devpilot_ci_redis_pass ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --requirepass devpilot_ci_redis_pass
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install Server Dependencies
+        run: cd server && npm ci
+
+      - name: Run Server Test Suite
+        env:
+          NODE_ENV: test
+          ACCESS_TOKEN_SECRET: devpilot_ci_access_secret_key_32chars!
+          REFRESH_TOKEN_SECRET: devpilot_ci_refresh_secret_key_32chars!
+          TOKEN_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          MONGO_URI: mongodb://127.0.0.1:27017/devpilot_ci
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+          REDIS_PASSWORD: devpilot_ci_redis_pass
+          ALLOW_UNSAFE_LOCAL_SANDBOX: "false"
+        run: cd server && npm test

@@ -1,5 +1,7 @@
 # 🚀 DevPilot
 
+[![DevPilot CI](https://github.com/harsh2102004/devpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/harsh2102004/devpilot/actions/workflows/ci.yml)
+
 > **AI-Powered Codebase Understanding, Testing, Debugging & Automated Fix Platform**
 
 DevPilot is an advanced developer productivity platform that connects to GitHub repositories to inspect, understand, test, debug, and safely propose fixes for codebases. Unlike generic AI chatbots that only receive small code snippets in a prompt, DevPilot analyzes the repository as an interconnected system of files, functions, AST nodes, imports, and execution relationships.
