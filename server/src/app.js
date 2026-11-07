@@ -101,12 +101,15 @@ app.get('/api/health', (req, res) => {
 });
 
 // 4. Rate Limiting Protection (Sub-Phase 10B)
-app.use('/api/auth/login', authRateLimiter);
-app.use('/api/auth/register', authRateLimiter);
-app.use('/api/scan', scanRateLimiter);
-app.use('/api/chat', chatRateLimiter);
-app.use('/api/test', testRateLimiter);
-app.use('/api', generalRateLimiter);
+// Active in development and production; disabled in test runner to prevent test pollution
+if (process.env.NODE_ENV !== "test") {
+    app.use('/api/auth/login', authRateLimiter);
+    app.use('/api/auth/register', authRateLimiter);
+    app.use('/api/scan', scanRateLimiter);
+    app.use('/api/chat', chatRateLimiter);
+    app.use('/api/test', testRateLimiter);
+    app.use('/api', generalRateLimiter);
+}
 
 // 5. Routes Declaration
 app.use('/api/auth', authRoutes);

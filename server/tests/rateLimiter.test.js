@@ -4,7 +4,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import { app, request } from "./testHelper.js";
 import { initTestDb, closeTestDb } from "./testDb.js";
-import { createRateLimitHandler, resolveClientKey } from "../src/middleware/rateLimiter.js";
+import { createRateLimitHandler, resolveClientKey, authRateLimiter } from "../src/middleware/rateLimiter.js";
 
 describe("Task 9: Rate Limiting & DoS Defense (Sub-Phase 10B)", () => {
     before(async () => {
@@ -62,12 +62,15 @@ describe("Task 9: Rate Limiting & DoS Defense (Sub-Phase 10B)", () => {
     });
 
     it("4. Global authRateLimiter on /api/auth/login triggers HTTP 429 after 10 requests", async () => {
-        // Send 11 rapid requests with distinct simulated client IP
+        const testAuthApp = express();
+        testAuthApp.use("/api/auth/login", authRateLimiter);
+        testAuthApp.post("/api/auth/login", (req, res) => res.status(200).json({ ok: true }));
+
         const testClientIp = "198.51.100.42";
         let lastRes;
 
         for (let i = 0; i < 11; i++) {
-            lastRes = await request(app)
+            lastRes = await request(testAuthApp)
                 .post("/api/auth/login")
                 .set("X-Forwarded-For", testClientIp)
                 .send({
