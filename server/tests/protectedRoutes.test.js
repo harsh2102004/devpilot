@@ -61,3 +61,4 @@ describe("Task 9: Protected Routes Authentication Enforcement", () => {
         assert.strictEqual(res.status, 401);
     });
 });
+

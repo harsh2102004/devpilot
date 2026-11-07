@@ -82,3 +82,4 @@ jobs:
           REDIS_PASSWORD: devpilot_ci_redis_pass
           ALLOW_UNSAFE_LOCAL_SANDBOX: "false"
         run: cd server && npm test
+

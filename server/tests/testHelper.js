@@ -35,3 +35,4 @@ export const generateTestToken = (userId, customPayload = {}) => {
 export const createSupertest = () => request(app);
 
 export { app, env, request };
+

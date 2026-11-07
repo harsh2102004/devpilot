@@ -2,7 +2,7 @@ import { Pinecone } from "@pinecone-database/pinecone";
 
 let pineconeClient = null;
 
-export const DEFAULT_INDEX_NAME = process.env.PINECONE_INDEX_NAME || "devpilot";
+export const DEFAULT_INDEX_NAME = process.env.PINECONE_INDEX_NAME || process.env.PINECONE_INDEX || "devpilot";
 export const VECTOR_DIMENSIONS = 3072;
 export const VECTOR_METRIC = "cosine";
 

@@ -1,34 +1,3 @@
-/**
- * ============================================================================
- * LEARNING NOTES & MISTAKES BREAKDOWN (FOR REVIEW):
- * 
- * 1. Import Paths & Named Exports:
- *    - Mistake: `import asyncHandler from "../middleware/asyncHandler.js"`
- *      -> asyncHandler is inside `../utils/asyncHandler.js`, not middleware.
- *    - Mistake: `import ApiError from "../utils/ApiError.js"`
- *      -> ApiError and ApiResponse are named exports, so they must use `{ ApiError }` and `{ ApiResponse }`.
- * 
- * 2. ApiResponse Constructor Argument Order:
- *    - Mistake: `new ApiResponse(201, "message", project)`
- *      -> The class constructor is `constructor(statusCode, data, message)`.
- *      -> Putting the string second stores the string inside `response.data`!
- *      -> Correct: `new ApiResponse(201, project, "Project created successfully")`.
- * 
- * 3. Required Fields vs Optional Fields:
- *    - In createProject: `if (!name || !description || !repoUrl.trim())`
- *      -> In DevPilot, a project can be created before connecting a GitHub repo.
- *      -> Only `name` is strictly required; `description`, `repoUrl`, `repoBranch` are optional.
- * 
- * 4. findByIdAndDelete vs findOneAndDelete:
- *    - Mistake: `Project.findOneAndDelete(projectId)`
- *      -> `findOneAndDelete` requires a query filter `{ _id: projectId }`.
- *      -> `findByIdAndDelete(projectId)` takes the string ID directly.
- * 
- * 5. Complete Exports:
- *    - Mistake: Omitting `deleteProject` and `updateProject` from the export list.
- * ============================================================================
- */
-
 import asyncHandler from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
