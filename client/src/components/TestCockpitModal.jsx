@@ -37,10 +37,11 @@ const TestCockpitModal = ({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
-  // Autonomous Fix Loop State (Phase 9C/9D)
+  // Autonomous Fix Loop State (Phase 9C/9D/9E)
   const [isFixing, setIsFixing] = useState(false);
   const [activeFixIndex, setActiveFixIndex] = useState(null);
   const [activeVerificationData, setActiveVerificationData] = useState(null);
+  const [isOpeningPR, setIsOpeningPR] = useState(false);
   
   // Custom execution options
   const [customCommand, setCustomCommand] = useState('');
@@ -595,7 +596,7 @@ const TestCockpitModal = ({
         </div>
       </div>
 
-      {/* Sub-Phase 9D: Human-in-the-Loop Patch Review Modal */}
+      {/* Sub-Phase 9D & 9E: Human-in-the-Loop Patch Review & Automated PR Modal */}
       {activeVerificationData && (
         <PatchReviewModal
           isOpen={Boolean(activeVerificationData)}
@@ -603,10 +604,30 @@ const TestCockpitModal = ({
           project={project}
           patch={activeVerificationData.verifiedPatch}
           verificationReport={activeVerificationData}
-          onApproveAndOpenPR={(prData) => {
-            console.log('Approve & Open PR triggered:', prData);
-            alert(`PR Approval registered for branch: ${prData.branchName}! Sub-Phase 9E will automate GitHub PR creation.`);
-            setActiveVerificationData(null);
+          isOpeningPR={isOpeningPR}
+          onApproveAndOpenPR={async (prPayload) => {
+            try {
+              setIsOpeningPR(true);
+              const res = await axios.post(`${API_BASE_URL}/test/${project._id}/create-pr`, {
+                filePath: prPayload.patch?.filePath,
+                modifiedContent: prPayload.modifiedContent,
+                patch: prPayload.patch,
+                failure: activeVerificationData?.failure,
+                verificationReport: activeVerificationData,
+                branchName: prPayload.branchName,
+              });
+
+              const pr = res.data?.data;
+              if (pr?.prUrl) {
+                window.open(pr.prUrl, '_blank', 'noopener,noreferrer');
+              }
+              setActiveVerificationData(null);
+            } catch (err) {
+              console.error('Failed to open PR:', err);
+              setErrorMsg(err.response?.data?.message || 'Failed to open Pull Request on GitHub');
+            } finally {
+              setIsOpeningPR(false);
+            }
           }}
           onDiscard={() => setActiveVerificationData(null)}
         />

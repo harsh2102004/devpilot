@@ -6,6 +6,7 @@ import {
     getTestRunById,
     deleteTestRun,
     verifyAutonomousFix,
+    createPullRequestForFix,
 } from "../controllers/test.controller.js";
 
 const router = express.Router();
@@ -15,6 +16,9 @@ router.post("/:projectId/run", auth, runProjectTests);
 
 // Trigger autonomous fix & verification loop on a failing test
 router.post("/:projectId/verify-fix", auth, verifyAutonomousFix);
+
+// Automate GitHub branch creation, fix commit, and PR creation (Sub-Phase 9E)
+router.post("/:projectId/create-pr", auth, createPullRequestForFix);
 
 // Get historical test runs for project
 router.get("/:projectId/runs", auth, getProjectTestRuns);

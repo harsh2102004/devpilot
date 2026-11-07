@@ -2,11 +2,13 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Project } from "../models/project.js";
+import { User } from "../models/User.js";
 import { Job } from "../models/job.js";
 import { TestRun } from "../models/testRun.js";
 import { addTestJob } from "../queues/test.queue.js";
 import { executeAutonomousVerificationLoop } from "../services/verificationLoop.service.js";
 import { prepareRepoDirectory, cleanupRepoDirectory } from "../services/repoCloner.service.js";
+import { createAutomatedPullRequest } from "../services/githubPr.service.js";
 
 /**
  * Trigger an asynchronous sandboxed test execution
@@ -264,10 +266,75 @@ export const verifyAutonomousFix = asyncHandler(async (req, res) => {
     }
 });
 
+/**
+ * Automate branch creation, fix commit, and GitHub Pull Request opening
+ * POST /api/test/:projectId/create-pr
+ */
+export const createPullRequestForFix = asyncHandler(async (req, res) => {
+    const { projectId } = req.params;
+    const {
+        filePath,
+        modifiedContent,
+        patch = null,
+        failure = null,
+        verificationReport = null,
+        branchName = null,
+        customTitle = null,
+        customBody = null,
+    } = req.body || {};
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+        throw new ApiError(404, "Project not found");
+    }
+
+    if (project.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You do not have permission to create pull requests for this project");
+    }
+
+    if (!project.repoUrl) {
+        throw new ApiError(400, "Project does not have a connected GitHub repository URL");
+    }
+
+    // Retrieve user's GitHub access token from DB
+    const userWithToken = await User.findById(req.user._id).select("+githubAccessToken");
+    const token =
+        userWithToken?.githubAccessToken ||
+        process.env.GITHUB_TOKEN ||
+        process.env.GITHUB_ACCESS_TOKEN ||
+        null;
+
+    const prResult = await createAutomatedPullRequest({
+        token,
+        repoUrl: project.repoUrl,
+        baseBranch: project.repoBranch || "main",
+        branchName,
+        filePath,
+        modifiedContent,
+        patch,
+        failure,
+        verificationReport,
+        customTitle,
+        customBody,
+        mock: !token,
+    });
+
+    return res.status(201).json(
+        new ApiResponse(
+            201,
+            prResult,
+            prResult.mock
+                ? "Simulated Pull Request generated successfully (Connect live GitHub token to publish directly to GitHub)"
+                : `GitHub Pull Request #${prResult.prNumber} opened successfully!`
+        )
+    );
+});
+
 export default {
     runProjectTests,
     getProjectTestRuns,
     getTestRunById,
     deleteTestRun,
     verifyAutonomousFix,
+    createPullRequestForFix,
 };
