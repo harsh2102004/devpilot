@@ -17,6 +17,13 @@ RUN npm ci --omit=dev
 # Copy application source code
 COPY . .
 
+# Create required runtime directories and set ownership to unprivileged 'node' user (Task 8)
+RUN mkdir -p /app/uploads/avatars /app/public/temp \
+    && chown -R node:node /app
+
+# Switch to unprivileged non-root user (uid 1000)
+USER node
+
 # Set production environment defaults
 ENV NODE_ENV=production
 ENV PORT=5000

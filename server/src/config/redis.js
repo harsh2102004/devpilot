@@ -11,13 +11,20 @@ const baseOptions = {
     },
 };
 
+const redisPassword =
+    process.env.REDIS_PASSWORD && process.env.REDIS_PASSWORD.trim() !== ""
+        ? process.env.REDIS_PASSWORD.trim()
+        : undefined;
 
 const redisConnection = process.env.REDIS_URL
-    ? new Redis(process.env.REDIS_URL, baseOptions)
+    ? new Redis(process.env.REDIS_URL, {
+          password: redisPassword,
+          ...baseOptions,
+      })
     : new Redis({
           host: process.env.REDIS_HOST || "127.0.0.1",
           port: Number(process.env.REDIS_PORT) || 6379,
-          password: process.env.REDIS_PASSWORD || undefined,
+          password: redisPassword,
           ...baseOptions,
       });
 

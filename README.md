@@ -170,6 +170,29 @@ Open `http://localhost:5173` in your browser.
 
 ---
 
+## 🔒 Security Architecture & Infrastructure Hardening
+
+DevPilot follows a defense-in-depth security model across its containerized services:
+
+### 1. Database & Messaging Isolation
+- **No Unmapped Host Ports**: MongoDB (`27017`) and Redis (`6379`) do not publish ports to the host machine. They communicate exclusively over the internal `devpilot-network` bridge.
+- **Mandatory Authentication**:
+  - Redis requires strict password authentication (`--requirepass ${REDIS_PASSWORD}`).
+  - MongoDB enforces root user credential authentication (`authSource=admin`).
+
+### 2. Least-Privilege Execution (Non-Root)
+- The API server container runs as an unprivileged, non-root user (`USER node`, UID 1000).
+
+### 3. Docker Socket Security Warning (`/var/run/docker.sock`)
+> [!WARNING]
+> **Docker Daemon Access & Isolation**:
+> In local development environments, sandboxed test execution requires access to the Docker daemon. To minimize blast radius:
+> 1. The internet-facing API server container (`devpilot-server`) **NEVER** mounts `/var/run/docker.sock`.
+> 2. Test execution is strictly isolated to the internal background runner service (`devpilot-test-worker`).
+> 3. For enterprise production deployments, never mount `/var/run/docker.sock` on shared hosts. Instead, point `DOCKER_HOST` to a remote isolated execution agent over mutual TLS (mTLS), or use dedicated Kubernetes ephemeral runner pods.
+
+---
+
 ## 🗺️ Roadmap & Current Status
 
 - [x] **Phase 1**: Authentication, JWT Session Security, User Model & Bcrypt
