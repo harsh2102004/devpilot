@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-
+import { isValidRepoUrl, isValidRepoBranch } from "../services/repoCloner.service.js";
 
 const projectSchema = new mongoose.Schema({
     name: {
@@ -15,10 +15,33 @@ const projectSchema = new mongoose.Schema({
         type: String,
         trim: true,
         default: "",
+        validate: {
+            validator: function (v) {
+                if (!v || v === "") return true;
+                return isValidRepoUrl(v);
+            },
+            message: (props) => `Invalid repository URL "${props.value}". Only GitHub repositories (https://github.com/<owner>/<repo> or <owner>/<repo>) are permitted.`
+        },
+        match: [
+            /^(?:$|https:\/\/github\.com\/[A-Za-z0-9_][A-Za-z0-9_.-]*\/[A-Za-z0-9_][A-Za-z0-9_.-]*(?:\.git)?\/?|[A-Za-z0-9_][A-Za-z0-9_.-]*\/[A-Za-z0-9_][A-Za-z0-9_.-]*(?:\.git)?)$/,
+            "Invalid repository URL format"
+        ],
     },
     repoBranch: {
         type: String,
         default: "main",
+        trim: true,
+        validate: {
+            validator: function (v) {
+                if (!v || v === "") return true;
+                return isValidRepoBranch(v);
+            },
+            message: (props) => `Invalid branch name "${props.value}". Must match /^[A-Za-z0-9._\\/-]{1,100}$/ and cannot start with '-'.`
+        },
+        match: [
+            /^(?!-)[A-Za-z0-9._\/-]{1,100}$/,
+            "Invalid branch name format"
+        ],
     },
     status: {
         type: String,

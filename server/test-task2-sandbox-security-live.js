@@ -259,3 +259,4 @@ runTests().catch((err) => {
     console.error("Task 2 test suite failed with unhandled exception:", err);
     process.exit(1);
 });
+

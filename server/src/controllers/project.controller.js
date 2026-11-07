@@ -33,6 +33,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Project } from "../models/project.js";
+import { validateRepoUrl, validateRepoBranch } from "../services/repoCloner.service.js";
 
 // 1. Create a new project (Only name is mandatory)
 const createProject = asyncHandler(async (req, res) => {
@@ -40,6 +41,14 @@ const createProject = asyncHandler(async (req, res) => {
 
     if (!name || !name.trim()) {
         throw new ApiError(400, "Project name is required");
+    }
+
+    // Validate repoUrl and repoBranch if supplied before database operations (Task 3)
+    if (repoUrl && typeof repoUrl === "string" && repoUrl.trim()) {
+        validateRepoUrl(repoUrl.trim());
+    }
+    if (repoBranch && typeof repoBranch === "string" && repoBranch.trim()) {
+        validateRepoBranch(repoBranch.trim());
     }
 
     const existingProject = await Project.findOne({
@@ -55,7 +64,7 @@ const createProject = asyncHandler(async (req, res) => {
         name: name.trim(),
         description: description?.trim() || "",
         repoUrl: repoUrl?.trim() || "",
-        repoBranch: repoBranch || "main",
+        repoBranch: repoBranch?.trim() || "main",
         owner: req.user._id
     });
 
@@ -105,10 +114,18 @@ const updateProject = asyncHandler(async (req, res) => {
         throw new ApiError(403, "You do not have permission to update this project");
     }
 
+    // Validate repoUrl and repoBranch if updated (Task 3)
+    if (repoUrl !== undefined && repoUrl !== null && repoUrl.trim() !== "") {
+        validateRepoUrl(repoUrl.trim());
+    }
+    if (repoBranch !== undefined && repoBranch !== null && repoBranch.trim() !== "") {
+        validateRepoBranch(repoBranch.trim());
+    }
+
     if (name) project.name = name.trim();
     if (description !== undefined) project.description = description.trim();
     if (repoUrl !== undefined) project.repoUrl = repoUrl.trim();
-    if (repoBranch) project.repoBranch = repoBranch;
+    if (repoBranch) project.repoBranch = repoBranch.trim();
     if (status) project.status = status;
 
     await project.save();

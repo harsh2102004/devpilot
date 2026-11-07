@@ -6,6 +6,7 @@ import { Job } from "../models/job.js";
 import { CodeGraph } from "../models/codeGraph.js";
 import { addScanJob } from "../queues/scan.queue.js";
 import { searchCodebase } from "../services/vectorDb.service.js";
+import { validateRepoUrl, validateRepoBranch } from "../services/repoCloner.service.js";
 
 // Start repository scan
 const startScan = asyncHandler(async (req, res) => {
@@ -22,8 +23,14 @@ const startScan = asyncHandler(async (req, res) => {
     }
 
     const repoUrl = project.repoUrl;
-    if (!repoUrl) {
+    if (!repoUrl || !repoUrl.trim()) {
         throw new ApiError(400, "Repository url is required to scan the project");
+    }
+
+    // Validate repoUrl and repoBranch (Task 3)
+    validateRepoUrl(repoUrl.trim());
+    if (project.repoBranch) {
+        validateRepoBranch(project.repoBranch.trim());
     }
 
     const activeScans = await Job.find({
