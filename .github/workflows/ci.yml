@@ -39,22 +39,16 @@ jobs:
         image: mongo:7.0
         ports:
           - 27017:27017
-        options: >-
-          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
       redis:
         image: redis:7-alpine
         ports:
           - 6379:6379
         options: >-
-          --health-cmd "redis-cli -a devpilot_ci_redis_pass ping"
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-          --requirepass devpilot_ci_redis_pass
 
     steps:
       - name: Checkout Source Code
@@ -79,7 +73,6 @@ jobs:
           MONGO_URI: mongodb://127.0.0.1:27017/devpilot_ci
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: 6379
-          REDIS_PASSWORD: devpilot_ci_redis_pass
+          REDIS_PASSWORD: ""
           ALLOW_UNSAFE_LOCAL_SANDBOX: "false"
         run: cd server && npm test
-

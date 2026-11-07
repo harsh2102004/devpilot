@@ -43,7 +43,7 @@ export const initTestDb = async () => {
     try {
         // Try connecting to existing MONGO_URI with short timeout
         const uri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/devpilot_test";
-        await mongoose.connect(uri, { serverSelectionTimeoutMS: 1500 });
+        await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
         console.log("[TestDB] Connected to MongoDB:", uri);
         return;
     } catch {
