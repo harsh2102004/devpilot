@@ -21,6 +21,7 @@ import { parseTestOutput } from "../services/testParser.service.js";
 import {
     executeInSandbox,
     detectProjectEnvironment,
+    ALLOWED_TEST_COMMANDS,
 } from "../services/sandbox.service.js";
 import {
     prepareRepoDirectory,
@@ -146,7 +147,12 @@ export const processTestJob = async (bullJob) => {
 
         // Sub-Phase 8B Requirement 3: Runtime Environment & Test Runner Auto-Detection
         const envInfo = detectProjectEnvironment(repoContext.repoDir);
-        const resolvedCommand = testCommand || envInfo.testCommand;
+        let resolvedCommand = testCommand || envInfo.testCommand;
+
+        // Security check: validate testCommand against fixed allow-list (Task 2)
+        if (testCommand && typeof testCommand === "string" && !ALLOWED_TEST_COMMANDS.includes(testCommand.trim())) {
+            throw new Error(`[TestWorker] Unauthorized test command rejected: "${testCommand}". Must match fixed allow-list.`);
+        }
 
         await logStep(
             40,
@@ -162,13 +168,14 @@ export const processTestJob = async (bullJob) => {
             // Optionally log highlights or forward chunks to pub/sub
         };
 
-        // Execute inside sandbox container or process fallback
+        // Execute inside sandbox container or process fallback (strictly network: "none", readOnly: true)
         const executionResult = await executeInSandbox({
             workingDir: repoContext.repoDir,
             command: resolvedCommand,
             timeoutMs,
             preferDocker,
-            readOnly,
+            readOnly: readOnly !== false,
+            network: "none",
             image: envInfo.image,
             onLog,
         });

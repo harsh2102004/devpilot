@@ -9,6 +9,7 @@ import { addTestJob } from "../queues/test.queue.js";
 import { executeAutonomousVerificationLoop } from "../services/verificationLoop.service.js";
 import { prepareRepoDirectory, cleanupRepoDirectory } from "../services/repoCloner.service.js";
 import { createAutomatedPullRequest } from "../services/githubPr.service.js";
+import { isDockerAvailable, ALLOWED_TEST_COMMANDS } from "../services/sandbox.service.js";
 
 /**
  * Trigger an asynchronous sandboxed test execution
@@ -16,7 +17,27 @@ import { createAutomatedPullRequest } from "../services/githubPr.service.js";
  */
 export const runProjectTests = asyncHandler(async (req, res) => {
     const { projectId } = req.params;
-    const { testCommand, timeoutMs = 60000, preferDocker = true, readOnly = false } = req.body || {};
+    const { testCommand, timeoutMs = 60000, preferDocker = true, readOnly = true } = req.body || {};
+
+    // 1. Verify sandbox availability before accepting execution request (Task 2)
+    const dockerStatus = await isDockerAvailable();
+    const allowUnsafeLocal = process.env.ALLOW_UNSAFE_LOCAL_SANDBOX === "true" && process.env.NODE_ENV !== "production";
+
+    if (!dockerStatus.available && !allowUnsafeLocal) {
+        throw new ApiError(503, "sandbox unavailable: Docker daemon is not running or accessible");
+    }
+
+    // 2. Enforce fixed allow-list on testCommand to prevent arbitrary command injection
+    let validatedTestCommand = null;
+    if (testCommand !== undefined && testCommand !== null && testCommand !== "") {
+        if (typeof testCommand !== "string" || !ALLOWED_TEST_COMMANDS.includes(testCommand.trim())) {
+            throw new ApiError(
+                400,
+                `Invalid testCommand "${testCommand}". Command must be one of: ${ALLOWED_TEST_COMMANDS.join(", ")} (or omit for auto-detection)`
+            );
+        }
+        validatedTestCommand = testCommand.trim();
+    }
 
     const project = await Project.findById(projectId);
     if (!project) {
@@ -47,8 +68,8 @@ export const runProjectTests = asyncHandler(async (req, res) => {
         userId: req.user._id,
         trigger: "manual",
         status: "queued",
-        testCommand: testCommand || "",
-        environment: preferDocker ? "docker" : "local-process",
+        testCommand: validatedTestCommand || "",
+        environment: dockerStatus.available ? "docker" : "local-process",
     });
 
     // 2. Create Job lifecycle record in MongoDB
@@ -69,10 +90,10 @@ export const runProjectTests = asyncHandler(async (req, res) => {
         repoBranch: project.repoBranch || "main",
         testRunId: testRun._id,
         jobRecordId: job._id,
-        testCommand,
+        testCommand: validatedTestCommand,
         timeoutMs,
-        preferDocker,
-        readOnly,
+        preferDocker: dockerStatus.available,
+        readOnly: readOnly !== false,
     });
 
     testRun.jobId = bullJob.id;
@@ -217,6 +238,14 @@ export const verifyAutonomousFix = asyncHandler(async (req, res) => {
 
     if (!failureEvidence) {
         throw new ApiError(400, "Failure evidence or valid testRunId with parsed failures is required");
+    }
+
+    // Verify sandbox availability before triggering autonomous verification loop (Task 2)
+    const dockerStatus = await isDockerAvailable();
+    const allowUnsafeLocal = process.env.ALLOW_UNSAFE_LOCAL_SANDBOX === "true" && process.env.NODE_ENV !== "production";
+
+    if (!dockerStatus.available && !allowUnsafeLocal) {
+        throw new ApiError(503, "sandbox unavailable: Docker daemon is not running or accessible");
     }
 
     // Resolve repository directory

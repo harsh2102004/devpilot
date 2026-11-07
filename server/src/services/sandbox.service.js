@@ -10,6 +10,25 @@ import { spawn, exec } from "child_process";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import os from "os";
+
+/**
+ * Fixed allow-list of permitted test execution commands.
+ * Blocks arbitrary free-text command injection from untrusted client requests.
+ */
+export const ALLOWED_TEST_COMMANDS = Object.freeze([
+    "npm test",
+    "npm run test",
+    "npm test --if-present",
+    "npx jest",
+    "npx vitest run",
+    "npx mocha",
+    "pytest",
+    "python -m pytest",
+    "python3 -m pytest",
+    "go test ./...",
+    "cargo test",
+]);
 
 // Cache for Docker daemon availability check
 let dockerStatusCache = {
@@ -184,8 +203,8 @@ export const buildDockerRunArgs = ({
     memoryLimit = "1024m",
     cpuLimit = "1.0",
     pidsLimit = 100,
-    network = "bridge",
-    readOnly = false,
+    network = "none",
+    readOnly = true,
     user = "1000:1000",
     env = {},
 }) => {
@@ -212,9 +231,12 @@ export const buildDockerRunArgs = ({
         dockerArgs.push("--user", user);
     }
 
-    // If read-only is enforced, mount ephemeral tmpfs directories for write caches
+    // Workspace mount is read-only except a dedicated /workspace/tmp
     if (readOnly) {
-        dockerArgs.push("--tmpfs", "/tmp:rw,noexec,nosuid,size=64m");
+        dockerArgs.push(
+            "--tmpfs", "/workspace/tmp:rw,noexec,nosuid,size=64m",
+            "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m"
+        );
     }
 
     // Inject custom environment variables
@@ -266,8 +288,8 @@ const runInDocker = ({
     memoryLimit = "1024m",
     cpuLimit = "1.0",
     pidsLimit = 100,
-    network = "bridge",
-    readOnly = false,
+    network = "none",
+    readOnly = true,
     user = "1000:1000",
     env = {},
     onLog = null,
@@ -400,17 +422,40 @@ const runInLocalSandbox = ({
         let timedOut = false;
         let isSettled = false;
 
-        const mergedEnv = {
-            ...process.env,
+        // Dedicated temporary directory for HOME
+        let tempHomeDir = "";
+        try {
+            tempHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), "devpilot-sandbox-home-"));
+        } catch {
+            tempHomeDir = os.tmpdir();
+        }
+
+        // Strictly sanitized environment: NEVER spread process.env
+        // Pass only PATH, HOME (temp dir), and CI
+        const sanitizedEnv = {
+            PATH: process.env.PATH || "",
+            HOME: tempHomeDir,
+            USERPROFILE: tempHomeDir,
+            TMPDIR: tempHomeDir,
+            TEMP: tempHomeDir,
+            TMP: tempHomeDir,
             CI: "true",
             DEVPILOT_SANDBOX: "local-process",
-            ...env,
+            ...(env || {}),
+        };
+
+        const cleanupTempHome = () => {
+            if (tempHomeDir && tempHomeDir.includes("devpilot-sandbox-home-") && fs.existsSync(tempHomeDir)) {
+                try {
+                    fs.rmSync(tempHomeDir, { recursive: true, force: true });
+                } catch {}
+            }
         };
 
         const child = spawn(fullCmd, [], {
             cwd: path.resolve(workingDir),
             shell: true,
-            env: mergedEnv,
+            env: sanitizedEnv,
             windowsHide: true,
         });
 
@@ -443,6 +488,7 @@ const runInLocalSandbox = ({
 
         child.on("error", (err) => {
             clearTimeout(timer);
+            cleanupTempHome();
             if (isSettled) return;
             isSettled = true;
 
@@ -461,6 +507,7 @@ const runInLocalSandbox = ({
 
         child.on("close", (code) => {
             clearTimeout(timer);
+            cleanupTempHome();
             if (isSettled) return;
             isSettled = true;
 
@@ -480,9 +527,59 @@ const runInLocalSandbox = ({
 };
 
 /**
+ * Executes dependency installation in an isolated container using an explicit network configuration ("bridge").
+ * Only invoked when dependencies must be resolved prior to running sandboxed tests with network: "none".
+ *
+ * @param {object} params
+ * @param {string} params.workingDir - Path to project workspace
+ * @param {string} [params.command] - Install command (e.g. "npm ci" or "pip install -r requirements.txt")
+ * @param {string} [params.network="bridge"] - Explicit network mode permitted for install step
+ * @param {number} [params.timeoutMs=120000] - Hard kill timeout for install
+ * @param {string} [params.image] - Container image
+ * @param {Function} [params.onLog] - Log chunk callback
+ * @returns {Promise<object>} Execution result
+ */
+export const installDependenciesInSandbox = async ({
+    workingDir,
+    command = null,
+    network = "bridge",
+    timeoutMs = 120000,
+    image = null,
+    onLog = null,
+}) => {
+    if (!workingDir || !fs.existsSync(workingDir)) {
+        throw new Error(`[SandboxService] Invalid workingDir for dependency install: "${workingDir}"`);
+    }
+
+    const envInfo = detectProjectEnvironment(workingDir);
+    let installCmd = command;
+    if (!installCmd) {
+        if (envInfo.runtime === "node") {
+            const hasLock = fs.existsSync(path.join(workingDir, "package-lock.json"));
+            installCmd = hasLock ? "npm ci --prefer-offline" : "npm install --prefer-offline";
+        } else if (envInfo.runtime === "python") {
+            installCmd = "pip install -r requirements.txt";
+        } else {
+            installCmd = "npm install";
+        }
+    }
+
+    return executeInSandbox({
+        workingDir,
+        command: installCmd,
+        timeoutMs,
+        image: image || envInfo.image,
+        network, // Explicitly permitted for dependency installation only
+        readOnly: false, // Write access needed to write node_modules / site-packages
+        onLog,
+    });
+};
+
+/**
  * Unified Sandbox Execution Interface
- * Automatically selects Docker container execution when Docker daemon is available,
- * or seamlessly falls back to process-isolated local sandbox with identical result schema.
+ * Automatically selects Docker container execution when Docker daemon is available.
+ * If Docker is unavailable, throws a clear error ("sandbox unavailable").
+ * Only allows local mode when process.env.ALLOW_UNSAFE_LOCAL_SANDBOX === "true" and NODE_ENV !== "production".
  *
  * @param {object} params
  * @param {string} params.workingDir - Workspace directory path
@@ -493,10 +590,12 @@ const runInLocalSandbox = ({
  * @param {string} [params.memoryLimit="1024m"] - Memory cap (e.g. "512m", "1024m")
  * @param {string} [params.cpuLimit="1.0"] - CPU cap (e.g. "0.5", "1.0")
  * @param {number} [params.pidsLimit=100] - Process ID limit
- * @param {string} [params.network="bridge"] - Docker network isolation ("bridge", "none")
- * @param {boolean} [params.readOnly=false] - Read-only volume mount (:ro)
+ * @param {string} [params.network="none"] - Docker network isolation (default: "none")
+ * @param {boolean} [params.readOnly=true] - Read-only volume mount (:ro with /workspace/tmp)
  * @param {string} [params.user="1000:1000"] - Non-root user
  * @param {Record<string, string>} [params.env={}] - Environment variables
+ * @param {boolean} [params.installDependencies=false] - Run explicit network-enabled install step first
+ * @param {string} [params.installNetwork="bridge"] - Network for install step
  * @param {Function} [params.onLog] - Live chunk callback
  * @returns {Promise<object>} Standardized execution report
  */
@@ -509,10 +608,12 @@ export const executeInSandbox = async ({
     memoryLimit = "1024m",
     cpuLimit = "1.0",
     pidsLimit = 100,
-    network = "bridge",
-    readOnly = false,
+    network = "none",
+    readOnly = true,
     user = "1000:1000",
     env = {},
+    installDependencies = false,
+    installNetwork = "bridge",
     onLog = null,
 }) => {
     if (!workingDir || !fs.existsSync(workingDir)) {
@@ -523,10 +624,18 @@ export const executeInSandbox = async ({
     const finalCommand = command || envInfo.testCommand;
     const finalImage = image || envInfo.image;
 
-    let useDocker = false;
-    if (preferDocker) {
-        const dockerStatus = await isDockerAvailable();
-        useDocker = dockerStatus.available;
+    // Check Docker daemon availability
+    const dockerStatus = await isDockerAvailable();
+    const useDocker = preferDocker && dockerStatus.available;
+
+    // Optional explicit dependency installation step (isolated before test lockdown)
+    if (installDependencies && useDocker) {
+        await installDependenciesInSandbox({
+            workingDir,
+            network: installNetwork,
+            image: finalImage,
+            onLog,
+        });
     }
 
     if (useDocker) {
@@ -546,6 +655,13 @@ export const executeInSandbox = async ({
         });
     }
 
+    // Docker is unavailable:
+    // Only allow local mode when process.env.ALLOW_UNSAFE_LOCAL_SANDBOX === "true" and NODE_ENV !== "production".
+    const allowUnsafeLocal = process.env.ALLOW_UNSAFE_LOCAL_SANDBOX === "true" && process.env.NODE_ENV !== "production";
+    if (!allowUnsafeLocal) {
+        throw new Error("sandbox unavailable: Docker daemon is not running or accessible");
+    }
+
     return runInLocalSandbox({
         workingDir,
         command: finalCommand,
@@ -556,10 +672,12 @@ export const executeInSandbox = async ({
 };
 
 export default {
+    ALLOWED_TEST_COMMANDS,
     isDockerAvailable,
     detectProjectEnvironment,
     normalizeVolumePath,
     buildDockerRunArgs,
     killProcessTree,
+    installDependenciesInSandbox,
     executeInSandbox,
 };

@@ -81,6 +81,8 @@ async function runTests() {
     assert(secArgs1.includes("--user") && secArgs1[secArgs1.indexOf("--user") + 1] === "1000:1000", "Enforces non-root user execution (--user 1000:1000)");
     assert(secArgs1.some(arg => arg.includes(":/workspace:ro")), "Configured read-only volume mount (:ro)");
     assert(secArgs1.includes("--tmpfs"), "Configured tmpfs cache mount for read-only containers");
+    assert(secArgs1.includes("/workspace/tmp:rw,noexec,nosuid,size=64m"), "Configured dedicated writable /workspace/tmp tmpfs");
+    assert(secArgs1.includes("--network=none"), "Enforces default network isolation (--network=none)");
     assert(secArgs1.includes("--security-opt") && secArgs1.includes("no-new-privileges:true"), "Prevents privilege escalation (--security-opt no-new-privileges:true)");
     assert(secArgs1.includes("--cap-drop=ALL"), "Drops all root capabilities (--cap-drop=ALL)");
 
@@ -110,9 +112,38 @@ async function runTests() {
     assert(typeof serverEnv.testCommand === "string", `Determined test command: "${serverEnv.testCommand}"`);
 
     // -------------------------------------------------------------
-    // Test 4: Live Sandboxed Command Execution
+    // Test 4: Live Sandboxed Command Execution & Environment Isolation
     // -------------------------------------------------------------
-    console.log("\n--- Group 4: Live Sandboxed Command Execution & Stream ---");
+    console.log("\n--- Group 4: Live Sandboxed Command Execution & Isolation ---");
+
+    // Task 2 Security Requirement: If Docker unavailable, throw "sandbox unavailable"
+    if (!dockerInfo.available) {
+        delete process.env.ALLOW_UNSAFE_LOCAL_SANDBOX;
+        let threwError = false;
+        let errorMessage = "";
+        try {
+            await executeInSandbox({ workingDir: ".", command: "node -v" });
+        } catch (err) {
+            threwError = true;
+            errorMessage = err.message;
+        }
+        assert(threwError, "executeInSandbox throws error when Docker is unavailable and unsafe mode disabled");
+        assert(errorMessage.includes("sandbox unavailable"), `Error message includes 'sandbox unavailable' (actual: "${errorMessage}")`);
+    }
+
+    // Enable ALLOW_UNSAFE_LOCAL_SANDBOX for authorized local testing
+    process.env.ALLOW_UNSAFE_LOCAL_SANDBOX = "true";
+
+    // Task 2 Security Requirement: Secrets in process.env MUST NEVER leak to sandbox
+    process.env.TEST_HOST_SECRET = "super_secret_host_key_12345";
+    const envLeakTest = await executeInSandbox({
+        workingDir: ".",
+        command: "node -e \"console.log('ENV_CHECK:TEST_HOST_SECRET=' + process.env.TEST_HOST_SECRET + ',ACCESS_SECRET=' + process.env.ACCESS_TOKEN_SECRET)\"",
+        timeoutMs: 10000,
+    });
+    assert(!envLeakTest.output.includes("super_secret_host_key_12345"), "Sandbox strips process.env secrets from child process environment");
+    assert(envLeakTest.output.includes("ENV_CHECK:TEST_HOST_SECRET=undefined"), "Child process confirms TEST_HOST_SECRET is undefined");
+
     let streamedChunks = 0;
     const testResult = await executeInSandbox({
         workingDir: ".",
