@@ -122,11 +122,19 @@ async function runTests() {
 
     // 1B. Test POST /api/test/:projectId/run via test.controller
     const { runProjectTests } = await import("./src/controllers/test.controller.js");
+    const { Project } = await import("./src/models/project.js");
+    const origFindOne = Project.findOne;
+    Project.findOne = async () => ({
+        _id: "507f1f77bcf86cd799439012",
+        owner: "507f1f77bcf86cd799439011",
+        repoUrl: "https://github.com/octocat/Hello-World",
+    });
 
     const controllerRes = await runMockReq(runProjectTests, {
         params: { projectId: "507f1f77bcf86cd799439012" },
         body: { testCommand: "npm test" },
     });
+    Project.findOne = origFindOne;
 
     if (!dockerStatus.available) {
         assert(controllerRes.statusCode === 503, `POST /api/test/:id/run returns HTTP 503 (actual: ${controllerRes.statusCode})`);

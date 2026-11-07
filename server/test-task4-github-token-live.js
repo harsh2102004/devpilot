@@ -189,7 +189,9 @@ async function runTests() {
     };
 
     const originalProjectFindById = Project.findById;
+    const originalProjectFindOne = Project.findOne;
     Project.findById = async () => mockProject;
+    Project.findOne = async () => mockProject;
 
     try {
         const linkRes = await runMockReq(linkRepoToProject, {
@@ -216,6 +218,7 @@ async function runTests() {
         assert(rejectLinkRes.statusCode === 400, "linkRepoToProject rejects unauthorized /etc with HTTP 400");
     } finally {
         Project.findById = originalProjectFindById;
+        Project.findOne = originalProjectFindOne;
     }
 
     // -------------------------------------------------------------

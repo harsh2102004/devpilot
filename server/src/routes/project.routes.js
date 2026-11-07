@@ -8,6 +8,7 @@ import {
 } from '../controllers/project.controller.js';
 import { linkRepoToProject } from '../controllers/github.controller.js';
 import { auth } from '../middleware/auth.js';
+import { validateObjectId } from '../middleware/validateObjectId.js';
 
 const router = express.Router();
 
@@ -19,14 +20,14 @@ router.route('/')
     .get(getUserProjects)
     .post(createProject);
 
-// /api/projects/:projectId/link-repo (Task 4)
+// /api/projects/:projectId/link-repo (Task 4 & Task 6)
 router.route('/:projectId/link-repo')
-    .post(linkRepoToProject);
+    .post(validateObjectId('projectId'), linkRepoToProject);
 
-// /api/projects/:projectId
+// /api/projects/:projectId (Task 6: validateObjectId validates MongoDB ObjectId)
 router.route('/:projectId')
-    .get(getProjectById)
-    .patch(updateProject)
-    .delete(deleteProject);
+    .get(validateObjectId('projectId'), getProjectById)
+    .patch(validateObjectId('projectId'), updateProject)
+    .delete(validateObjectId('projectId'), deleteProject);
 
 export default router;

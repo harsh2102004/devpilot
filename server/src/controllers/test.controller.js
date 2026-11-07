@@ -17,18 +17,10 @@ import { decryptToken } from "../services/tokenEncryption.service.js";
  * POST /api/test/:projectId/run
  */
 export const runProjectTests = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
+    const projectId = req.params.projectId || req.params.id;
     const { testCommand, timeoutMs = 60000, preferDocker = true, readOnly = true } = req.body || {};
 
-    // 1. Verify sandbox availability before accepting execution request (Task 2)
-    const dockerStatus = await isDockerAvailable();
-    const allowUnsafeLocal = process.env.ALLOW_UNSAFE_LOCAL_SANDBOX === "true" && process.env.NODE_ENV !== "production";
-
-    if (!dockerStatus.available && !allowUnsafeLocal) {
-        throw new ApiError(503, "sandbox unavailable: Docker daemon is not running or accessible");
-    }
-
-    // 2. Enforce fixed allow-list on testCommand to prevent arbitrary command injection
+    // 1. Enforce fixed allow-list on testCommand to prevent arbitrary command injection (Task 2)
     let validatedTestCommand = null;
     if (testCommand !== undefined && testCommand !== null && testCommand !== "") {
         if (typeof testCommand !== "string" || !ALLOWED_TEST_COMMANDS.includes(testCommand.trim())) {
@@ -40,13 +32,21 @@ export const runProjectTests = asyncHandler(async (req, res) => {
         validatedTestCommand = testCommand.trim();
     }
 
-    const project = await Project.findById(projectId);
+    // 2. Task 6: Filter query by owner first, returning 404 for not found and not yours
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id,
+    });
     if (!project) {
         throw new ApiError(404, "Project not found");
     }
 
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to execute tests on this project");
+    // 3. Verify sandbox availability before accepting execution request (Task 2)
+    const dockerStatus = await isDockerAvailable();
+    const allowUnsafeLocal = process.env.ALLOW_UNSAFE_LOCAL_SANDBOX === "true" && process.env.NODE_ENV !== "production";
+
+    if (!dockerStatus.available && !allowUnsafeLocal) {
+        throw new ApiError(503, "sandbox unavailable: Docker daemon is not running or accessible");
     }
 
     if (!project.repoUrl) {
@@ -122,17 +122,17 @@ export const runProjectTests = asyncHandler(async (req, res) => {
  * GET /api/test/:projectId/runs
  */
 export const getProjectTestRuns = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
+    const projectId = req.params.projectId || req.params.id;
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
 
-    const project = await Project.findById(projectId);
+    // Task 6: Filter query by owner, returning 404 for not found and not yours
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id,
+    });
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to view tests for this project");
     }
 
     const totalRuns = await TestRun.countDocuments({ projectId });
@@ -166,14 +166,13 @@ export const getProjectTestRuns = asyncHandler(async (req, res) => {
 export const getTestRunById = asyncHandler(async (req, res) => {
     const { runId } = req.params;
 
-    const testRun = await TestRun.findById(runId);
+    // Task 6: Filter by userId in database query, returning 404 for not found and not yours
+    const testRun = await TestRun.findOne({
+        _id: runId,
+        userId: req.user._id,
+    });
     if (!testRun) {
         throw new ApiError(404, "Test run record not found");
-    }
-
-    // Ownership check
-    if (testRun.userId.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to view this test run");
     }
 
     return res.status(200).json(
@@ -188,16 +187,14 @@ export const getTestRunById = asyncHandler(async (req, res) => {
 export const deleteTestRun = asyncHandler(async (req, res) => {
     const { runId } = req.params;
 
-    const testRun = await TestRun.findById(runId);
+    // Task 6: Filter by userId in database query, returning 404 for not found and not yours
+    const testRun = await TestRun.findOneAndDelete({
+        _id: runId,
+        userId: req.user._id,
+    });
     if (!testRun) {
         throw new ApiError(404, "Test run record not found");
     }
-
-    if (testRun.userId.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to delete this test run");
-    }
-
-    await TestRun.findByIdAndDelete(runId);
 
     return res.status(200).json(
         new ApiResponse(200, { deletedId: runId }, "Test run deleted successfully")
@@ -209,7 +206,7 @@ export const deleteTestRun = asyncHandler(async (req, res) => {
  * POST /api/test/:projectId/verify-fix
  */
 export const verifyAutonomousFix = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
+    const projectId = req.params.projectId || req.params.id;
     const {
         testRunId,
         failureIndex = 0,
@@ -219,13 +216,12 @@ export const verifyAutonomousFix = asyncHandler(async (req, res) => {
         timeoutMs = 60000,
     } = req.body || {};
 
-    const project = await Project.findById(projectId);
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id,
+    });
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to trigger fixes on this project");
     }
 
     // Resolve failure evidence
@@ -301,7 +297,7 @@ export const verifyAutonomousFix = asyncHandler(async (req, res) => {
  * POST /api/test/:projectId/create-pr
  */
 export const createPullRequestForFix = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
+    const projectId = req.params.projectId || req.params.id;
     const {
         filePath,
         modifiedContent,
@@ -313,13 +309,12 @@ export const createPullRequestForFix = asyncHandler(async (req, res) => {
         customBody = null,
     } = req.body || {};
 
-    const project = await Project.findById(projectId);
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id,
+    });
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to create pull requests for this project");
     }
 
     if (!project.repoUrl) {

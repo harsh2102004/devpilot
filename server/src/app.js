@@ -122,7 +122,11 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
     let { statusCode, message } = err;
 
-    if (!(err instanceof ApiError)) {
+    // Defense-in-depth: automatically map any Mongoose CastError (e.g. invalid ObjectId) to HTTP 400
+    if (err.name === "CastError") {
+        statusCode = 400;
+        message = `Invalid ID format for ${err.path || "parameter"}: ${err.value}`;
+    } else if (!(err instanceof ApiError)) {
         statusCode = 500;
         message = err.message || 'Internal Server Error';
         console.error(err);

@@ -10,16 +10,16 @@ import { validateRepoUrl, validateRepoBranch } from "../services/repoCloner.serv
 
 // Start repository scan
 const startScan = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
+    const projectId = req.params.projectId || req.params.id;
 
-    const project = await Project.findById(projectId);
+    // Task 6: Filter query by owner, returning 404 for not found and not yours
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id
+    });
 
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to scan this project");
     }
 
     const repoUrl = project.repoUrl;
@@ -70,14 +70,15 @@ const startScan = asyncHandler(async (req, res) => {
 // Polling status for a specific job
 const getjobstatus = asyncHandler(async (req, res) => {
     const { jobId } = req.params;
-    const job = await Job.findById(jobId);
+
+    // Task 6: Filter by userId in database query, returning 404 for not found and not yours
+    const job = await Job.findOne({
+        _id: jobId,
+        userId: req.user._id
+    });
 
     if (!job) {
         throw new ApiError(404, "Job not found");
-    }
-
-    if (job.userId.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to view this job");
     }
 
     return res.status(200).json(
@@ -87,15 +88,16 @@ const getjobstatus = asyncHandler(async (req, res) => {
 
 // Scan history for a specific project
 const getprojectscanhistory = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
-    const project = await Project.findById(projectId);
+    const projectId = req.params.projectId || req.params.id;
+
+    // Task 6: Filter query by owner, returning 404 for not found and not yours
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id
+    });
 
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to view this project's scan history");
     }
 
     const jobs = await Job.find({ projectId: projectId }).sort({ createdAt: -1 });
@@ -107,15 +109,16 @@ const getprojectscanhistory = asyncHandler(async (req, res) => {
 
 // Fetch latest code graph for a specific project
 const getProjectCodeGraph = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
-    const project = await Project.findById(projectId);
+    const projectId = req.params.projectId || req.params.id;
+
+    // Task 6: Filter query by owner, returning 404 for not found and not yours
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id
+    });
 
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to view this project's code graph");
     }
 
     const codeGraph = await CodeGraph.findOne({ projectId: projectId });
@@ -131,21 +134,21 @@ const getProjectCodeGraph = asyncHandler(async (req, res) => {
 
 // Semantic search within project codebase vectors
 const searchProjectCode = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
+    const projectId = req.params.projectId || req.params.id;
     const { query, topK = 5, filter } = req.body;
 
     if (!query || typeof query !== "string" || !query.trim()) {
         throw new ApiError(400, "Search query is required");
     }
 
-    const project = await Project.findById(projectId);
+    // Task 6: Filter query by owner, returning 404 for not found and not yours
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id
+    });
 
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to search this project");
     }
 
     const limit = Math.min(Math.max(parseInt(topK, 10) || 5, 1), 20);

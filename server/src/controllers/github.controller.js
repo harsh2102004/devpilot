@@ -127,14 +127,12 @@ export const linkRepoToProject = asyncHandler(async (req, res) => {
         validateRepoBranch(repoBranch.trim());
     }
 
-    const project = await Project.findById(projectId);
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id
+    });
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    // Enforce 403 ownership check
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to modify this project");
     }
 
     project.repoUrl = repoUrl.trim();

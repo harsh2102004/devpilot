@@ -2,6 +2,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Project } from "../models/project.js";
+import { isValidObjectId } from "../middleware/validateObjectId.js";
 import { retrieveHybridContext } from "../services/hybridRetriever.service.js";
 import {
     buildSystemPrompt,
@@ -26,21 +27,21 @@ import {
 export const streamChat = asyncHandler(async (req, res) => {
     const { projectId, query, history = [], maxTokens = 3500, topK = 3 } = req.body;
 
-    if (!projectId) {
-        throw new ApiError(400, "projectId is required for codebase chat");
+    if (!projectId || !isValidObjectId(projectId)) {
+        throw new ApiError(400, "Valid projectId is required for codebase chat");
     }
 
     if (!query || typeof query !== "string" || !query.trim()) {
         throw new ApiError(400, "query is required for codebase chat");
     }
 
-    const project = await Project.findById(projectId);
+    // Task 6: Filter query by owner, returning 404 for not found and not yours
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id,
+    });
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to chat with this project codebase");
     }
 
     // Set Server-Sent Events headers
@@ -148,21 +149,21 @@ export const streamChat = asyncHandler(async (req, res) => {
 export const askQuestion = asyncHandler(async (req, res) => {
     const { projectId, query, history = [], maxTokens = 3500, topK = 3 } = req.body;
 
-    if (!projectId) {
-        throw new ApiError(400, "projectId is required");
+    if (!projectId || !isValidObjectId(projectId)) {
+        throw new ApiError(400, "Valid projectId is required");
     }
 
     if (!query || typeof query !== "string" || !query.trim()) {
         throw new ApiError(400, "query is required");
     }
 
-    const project = await Project.findById(projectId);
+    // Task 6: Filter query by owner, returning 404 for not found and not yours
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id,
+    });
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to chat with this project");
     }
 
     const hybridResult = await retrieveHybridContext({

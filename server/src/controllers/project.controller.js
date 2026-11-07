@@ -82,17 +82,17 @@ const getUserProjects = asyncHandler(async (req, res) => {
     );
 });
 
-// 3. Get single project by ID (with 403 ownership enforcement)
+// 3. Get single project by ID (scoped by owner in query, returns 404 if not found or not yours)
 const getProjectById = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
+    const projectId = req.params.projectId || req.params.id;
 
-    const project = await Project.findById(projectId);
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id
+    });
+
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to view this project");
     }
 
     return res.status(200).json(
@@ -100,18 +100,19 @@ const getProjectById = asyncHandler(async (req, res) => {
     );
 });
 
-// 4. Update a project (with 403 ownership enforcement)
+// 4. Update a project (status excluded: server state cannot be manipulated by client; scoped by owner)
 const updateProject = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
-    const { name, description, repoUrl, repoBranch, status } = req.body;
+    const projectId = req.params.projectId || req.params.id;
+    // Task 6: Remove status from req.body to stop client from controlling server state
+    const { name, description, repoUrl, repoBranch } = req.body;
 
-    const project = await Project.findById(projectId);
+    const project = await Project.findOne({
+        _id: projectId,
+        owner: req.user._id
+    });
+
     if (!project) {
         throw new ApiError(404, "Project not found");
-    }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to update this project");
     }
 
     // Validate repoUrl and repoBranch if updated (Task 3)
@@ -126,7 +127,7 @@ const updateProject = asyncHandler(async (req, res) => {
     if (description !== undefined) project.description = description.trim();
     if (repoUrl !== undefined) project.repoUrl = repoUrl.trim();
     if (repoBranch) project.repoBranch = repoBranch.trim();
-    if (status) project.status = status;
+    // Do NOT allow req.body.status to alter project.status (only workers update status)
 
     await project.save();
 
@@ -135,20 +136,18 @@ const updateProject = asyncHandler(async (req, res) => {
     );
 });
 
-// 5. Delete a project (with 403 ownership enforcement)
+// 5. Delete a project (scoped by owner in query, returns 404 if not found or not yours)
 const deleteProject = asyncHandler(async (req, res) => {
-    const { projectId } = req.params;
+    const projectId = req.params.projectId || req.params.id;
 
-    const project = await Project.findById(projectId);
+    const project = await Project.findOneAndDelete({
+        _id: projectId,
+        owner: req.user._id
+    });
+
     if (!project) {
         throw new ApiError(404, "Project not found");
     }
-
-    if (project.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You do not have permission to delete this project");
-    }
-
-    await Project.findByIdAndDelete(projectId);
 
     return res.status(200).json(
         new ApiResponse(200, {}, "Project deleted successfully")
