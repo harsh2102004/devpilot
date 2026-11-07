@@ -17,6 +17,7 @@ import {
 import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectCard from '../components/ProjectCard';
 import CodebaseChatDrawer from '../components/CodebaseChatDrawer';
+import TestCockpitModal from '../components/TestCockpitModal';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -27,6 +28,7 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedChatProject, setSelectedChatProject] = useState(null);
+  const [selectedTestProject, setSelectedTestProject] = useState(null);
 
 
   useEffect(() => {
@@ -272,6 +274,7 @@ const Dashboard = () => {
                 project={proj}
                 onDelete={handleDeleteProject}
                 onOpen={handleOpenProject}
+                onRunTests={(project) => setSelectedTestProject(project)}
               />
             ))}
           </div>
@@ -290,6 +293,17 @@ const Dashboard = () => {
         isOpen={Boolean(selectedChatProject)}
         onClose={() => setSelectedChatProject(null)}
         project={selectedChatProject}
+      />
+
+      {/* Sandboxed Test Cockpit Modal (Phase 8E) */}
+      <TestCockpitModal
+        isOpen={Boolean(selectedTestProject)}
+        onClose={() => setSelectedTestProject(null)}
+        project={selectedTestProject}
+        onAskAiToFix={(failure, promptText) => {
+          setSelectedChatProject(selectedTestProject);
+          setSelectedTestProject(null);
+        }}
       />
 
     </div>

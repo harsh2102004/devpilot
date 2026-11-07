@@ -8,12 +8,13 @@ import {
   Clock, 
   Terminal,
   Sparkles,
-  Loader2
+  Loader2,
+  FlaskConical,
 } from 'lucide-react';
 
 import './ProjectCard.css';
 
-const ProjectCard = ({ project, onDelete, onOpen }) => {
+const ProjectCard = ({ project, onDelete, onOpen, onRunTests }) => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Map project status to badge styling and readable label
@@ -117,15 +118,28 @@ const ProjectCard = ({ project, onDelete, onOpen }) => {
         </div>
       </div>
 
-      {/* Footer Action */}
-      <div className="project-card-footer">
+      {/* Footer Actions */}
+      <div className="project-card-footer" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
         <button 
-          className="btn btn-primary btn-block project-launch-btn"
-          onClick={() => onOpen(project)}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
+          className="btn btn-secondary project-test-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onRunTests) onRunTests(project);
+          }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.55rem 0.65rem', fontSize: '0.82rem' }}
+          title="Run tests in isolated sandbox"
         >
-          <Sparkles size={15} />
-          <span>Chat with Codebase</span>
+          <FlaskConical size={14} />
+          <span>Run Tests</span>
+        </button>
+
+        <button 
+          className="btn btn-primary project-launch-btn"
+          onClick={() => onOpen(project)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.55rem 0.65rem', fontSize: '0.82rem' }}
+        >
+          <Sparkles size={14} />
+          <span>Chat Code</span>
         </button>
       </div>
     </div>
