@@ -68,6 +68,17 @@ export const getTestQueueEvents = () => {
     return _testQueueEvents;
 };
 
+export const closeTestQueue = async () => {
+    if (_testQueue) {
+        try { await _testQueue.close(); } catch {}
+        _testQueue = null;
+    }
+    if (_testQueueEvents) {
+        try { await _testQueueEvents.close(); } catch {}
+        _testQueueEvents = null;
+    }
+};
+
 // Export getters / proxies for modularity and testing
 export const testQueue = {
     add: (...args) => getTestQueue().add(...args),

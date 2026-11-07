@@ -10,6 +10,7 @@ jobs:
   client-check:
     name: Client Lint & Build (oxlint + Vite)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -33,6 +34,7 @@ jobs:
   server-test:
     name: Server Automated Tests (node:test + supertest)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     services:
       mongodb:

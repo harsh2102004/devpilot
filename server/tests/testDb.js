@@ -56,6 +56,19 @@ export const initTestDb = async () => {
  * Clean up database connections and in-memory resources
  */
 export const closeTestDb = async () => {
+    try {
+        const { closeScanQueue } = await import("../src/queues/scan.queue.js");
+        await closeScanQueue();
+    } catch {}
+    try {
+        const { closeTestQueue } = await import("../src/queues/test.queue.js");
+        await closeTestQueue();
+    } catch {}
+    try {
+        const { closeRedisConnection } = await import("../src/config/redis.js");
+        await closeRedisConnection();
+    } catch {}
+
     if (mongoServerInstance) {
         try {
             await mongoServerInstance.stop();

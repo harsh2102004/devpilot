@@ -47,5 +47,17 @@ redisConnection.on("close", () => {
     console.warn("[Redis] Connection closed, reconnecting...");
 });
 
+export const closeRedisConnection = async () => {
+    try {
+        if (redisConnection && redisConnection.status !== "end") {
+            await redisConnection.quit();
+        }
+    } catch {
+        try {
+            redisConnection.disconnect();
+        } catch {}
+    }
+};
+
 export { redisConnection };
 export default redisConnection;

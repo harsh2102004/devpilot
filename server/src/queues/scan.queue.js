@@ -69,6 +69,17 @@ export const scanQueueEvents = {
 };
 
 
+export const closeScanQueue = async () => {
+    if (_scanQueue) {
+        try { await _scanQueue.close(); } catch {}
+        _scanQueue = null;
+    }
+    if (_scanQueueEvents) {
+        try { await _scanQueueEvents.close(); } catch {}
+        _scanQueueEvents = null;
+    }
+};
+
 export const addScanJob = async ({ projectId, userId, repoUrl, repoBranch = "main", jobRecordId }) => {
     if (!projectId || !repoUrl) {
         throw new ApiError(400, "projectId and repoUrl are required to enqueue a scan job");
