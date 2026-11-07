@@ -245,6 +245,7 @@ export const buildPatchPrompt = ({
     diagnosticReport = "",
     filePath,
     fileContent,
+    previousAttempts = [],
 }) => {
     const systemPrompt = `You are DevPilot's Autonomous Patch Synthesis Engine.
 Your task is to fix a test failure by generating a minimal, surgical code replacement.
@@ -259,6 +260,18 @@ CRITICAL INSTRUCTIONS:
   "replacementCode": "The new replacement code to insert in place of targetCode"
 }`;
 
+    const reflectionSection =
+        previousAttempts && previousAttempts.length > 0
+            ? `\nPrior Verification Failures (Reflection Context):
+${previousAttempts
+    .map(
+        (att, idx) =>
+            `Attempt ${idx + 1}: Target "${att.patch?.targetCode || ""}" -> "${att.patch?.replacementCode || ""}"\nFailed With: ${att.errorFeedback || att.status || "Test verification failed"}`
+    )
+    .join("\n")}
+Important: Do NOT repeat the exact failed patch above. Address the regression or remaining error.\n`
+            : "";
+
     const userPrompt = `Project: ${projectName}
 File to Fix: ${filePath}
 
@@ -267,7 +280,7 @@ Test Failure Evidence:
 - Error: ${failure.errorName}: ${failure.errorMessage}
 - Failure Line: ${failure.line || "unknown"}
 
-${diagnosticReport ? `Root Cause Diagnosis (from Phase 9A):\n${diagnosticReport}\n` : ""}
+${diagnosticReport ? `Root Cause Diagnosis (from Phase 9A):\n${diagnosticReport}\n` : ""}${reflectionSection}
 Current File Content:
 \`\`\`
 ${fileContent}
@@ -290,6 +303,7 @@ Generate the minimal targeted fix JSON now:`;
 export const generateOfflinePatch = ({
     failure,
     originalContent,
+    previousAttempts = [],
 }) => {
     // Look for status code mismatches (e.g. Expected 401 but received 200)
     const statusMatch = failure?.errorMessage?.match(/(?:Expected|expected)\s+(\d{3})\s+.*?(?:received|got)\s+(\d{3})/i);
@@ -341,6 +355,7 @@ export const generateOfflinePatch = ({
  * @param {string} [params.diagnosticReport] - Diagnosis from Phase 9A
  * @param {string} params.filePath - Path of file to patch
  * @param {string} params.originalContent - Original code text
+ * @param {Array<object>} [params.previousAttempts=[]] - History of failed attempts for reflection
  * @param {Function} [params.onToken] - Streaming callback
  * @returns {Promise<object>} Standardized patch result object
  */
@@ -351,19 +366,20 @@ export const synthesizePatch = async ({
     diagnosticReport = "",
     filePath,
     originalContent,
+    previousAttempts = [],
     onToken = null,
 }) => {
     if (!filePath || !originalContent) {
         throw new Error("[PatchGenerator] filePath and originalContent are required for patch synthesis");
     }
 
-    const patchId = `patch-${Date.now()}`;
+    const patchId = `patch-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const llmConfig = getLlmConfig();
 
     let patchProposal = null;
 
     if (llmConfig.provider === "offline" || !llmConfig.apiKey) {
-        patchProposal = generateOfflinePatch({ failure, originalContent });
+        patchProposal = generateOfflinePatch({ failure, originalContent, previousAttempts });
     } else {
         const messages = buildPatchPrompt({
             projectName,
@@ -371,6 +387,7 @@ export const synthesizePatch = async ({
             diagnosticReport,
             filePath,
             fileContent: originalContent,
+            previousAttempts,
         });
 
         try {
@@ -461,3 +478,4 @@ export default {
     generateOfflinePatch,
     synthesizePatch,
 };
+

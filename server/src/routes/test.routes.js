@@ -5,12 +5,16 @@ import {
     getProjectTestRuns,
     getTestRunById,
     deleteTestRun,
+    verifyAutonomousFix,
 } from "../controllers/test.controller.js";
 
 const router = express.Router();
 
 // Trigger a test run on project
 router.post("/:projectId/run", auth, runProjectTests);
+
+// Trigger autonomous fix & verification loop on a failing test
+router.post("/:projectId/verify-fix", auth, verifyAutonomousFix);
 
 // Get historical test runs for project
 router.get("/:projectId/runs", auth, getProjectTestRuns);

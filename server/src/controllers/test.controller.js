@@ -5,6 +5,8 @@ import { Project } from "../models/project.js";
 import { Job } from "../models/job.js";
 import { TestRun } from "../models/testRun.js";
 import { addTestJob } from "../queues/test.queue.js";
+import { executeAutonomousVerificationLoop } from "../services/verificationLoop.service.js";
+import { prepareRepoDirectory, cleanupRepoDirectory } from "../services/repoCloner.service.js";
 
 /**
  * Trigger an asynchronous sandboxed test execution
@@ -178,9 +180,94 @@ export const deleteTestRun = asyncHandler(async (req, res) => {
     );
 });
 
+/**
+ * Run autonomous AI debugging and sandbox verification loop on a test failure
+ * POST /api/test/:projectId/verify-fix
+ */
+export const verifyAutonomousFix = asyncHandler(async (req, res) => {
+    const { projectId } = req.params;
+    const {
+        testRunId,
+        failureIndex = 0,
+        customFailure = null,
+        maxAttempts = 3,
+        preferDocker = false,
+        timeoutMs = 60000,
+    } = req.body || {};
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+        throw new ApiError(404, "Project not found");
+    }
+
+    if (project.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You do not have permission to trigger fixes on this project");
+    }
+
+    // Resolve failure evidence
+    let failureEvidence = customFailure;
+    if (!failureEvidence && testRunId) {
+        const testRun = await TestRun.findById(testRunId);
+        if (testRun && testRun.failures && testRun.failures.length > failureIndex) {
+            failureEvidence = testRun.failures[failureIndex];
+        }
+    }
+
+    if (!failureEvidence) {
+        throw new ApiError(400, "Failure evidence or valid testRunId with parsed failures is required");
+    }
+
+    // Resolve repository directory
+    const repoInfo = await prepareRepoDirectory({
+        repoUrl: project.repoUrl,
+        repoBranch: project.repoBranch || "main",
+    });
+
+    try {
+        const verificationReport = await executeAutonomousVerificationLoop({
+            projectId: project._id,
+            projectName: project.name,
+            repoDir: repoInfo.repoDir,
+            failure: failureEvidence,
+            maxAttempts,
+            preferDocker,
+            timeoutMs,
+        });
+
+        // If verification passed, create an 'ai-debug' TestRun record in MongoDB documenting the verified fix
+        if (verificationReport.verified && verificationReport.finalTestResult) {
+            await TestRun.create({
+                projectId: project._id,
+                userId: req.user._id,
+                trigger: "ai-debug",
+                status: "passed",
+                environment: verificationReport.finalTestResult.environment || "local-process",
+                testCommand: project.testCommand || "",
+                summary: verificationReport.finalTestResult.summary,
+                rawOutput: verificationReport.finalTestResult.rawOutput,
+            });
+        }
+
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                verificationReport,
+                verificationReport.verified
+                    ? "Autonomous fix successfully synthesized and verified in sandbox!"
+                    : "Autonomous verification loop completed without full pass"
+            )
+        );
+    } finally {
+        if (repoInfo.isTemp) {
+            await cleanupRepoDirectory(repoInfo.repoDir);
+        }
+    }
+});
+
 export default {
     runProjectTests,
     getProjectTestRuns,
     getTestRunById,
     deleteTestRun,
+    verifyAutonomousFix,
 };
