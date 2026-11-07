@@ -12,6 +12,7 @@
 import { Octokit } from "@octokit/rest";
 import path from "path";
 import { ApiError } from "../utils/ApiError.js";
+import { decryptToken } from "./tokenEncryption.service.js";
 
 /**
  * Parses GitHub repository owner and repo name from various URL formats.
@@ -461,8 +462,10 @@ export const createAutomatedPullRequest = async ({
         throw new ApiError(401, "GitHub access token is required to create a Pull Request on GitHub");
     }
 
+    const plainToken = decryptToken(token.trim());
+
     const octokit = new Octokit({
-        auth: token.trim(),
+        auth: plainToken,
         userAgent: "DevPilot-Agent/1.0.0",
     });
 

@@ -6,6 +6,7 @@ import {
     updateProject,
     deleteProject
 } from '../controllers/project.controller.js';
+import { linkRepoToProject } from '../controllers/github.controller.js';
 import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -17,6 +18,10 @@ router.use(auth);
 router.route('/')
     .get(getUserProjects)
     .post(createProject);
+
+// /api/projects/:projectId/link-repo (Task 4)
+router.route('/:projectId/link-repo')
+    .post(linkRepoToProject);
 
 // /api/projects/:projectId
 router.route('/:projectId')

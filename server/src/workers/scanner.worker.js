@@ -16,6 +16,7 @@ import {
     getProjectNamespace,
 } from "../services/vectorDb.service.js";
 import { prepareRepoDirectory, cleanupRepoDirectory } from "../services/repoCloner.service.js";
+import { decryptToken } from "../services/tokenEncryption.service.js";
 
 dotenv.config({ path: "./.env" });
 
@@ -60,12 +61,12 @@ export const processScanJob = async (bullJob) => {
         // Transition project status: connected/disconnected -> scanning
         await Project.findByIdAndUpdate(projectId, { status: "scanning" });
 
-        // Retrieve GitHub Access Token if user connected their GitHub account
+        // Retrieve GitHub Access Token if user connected their GitHub account (decrypt if encrypted)
         let githubToken = null;
         if (userId) {
             const user = await User.findById(userId).select("+githubAccessToken");
             if (user?.githubAccessToken) {
-                githubToken = user.githubAccessToken;
+                githubToken = user.getDecryptedGitHubToken ? user.getDecryptedGitHubToken() : decryptToken(user.githubAccessToken);
             }
         }
 

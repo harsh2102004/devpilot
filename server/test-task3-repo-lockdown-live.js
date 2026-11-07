@@ -238,8 +238,10 @@ async function runTests() {
     const formattedShorthand = formatCloneUrl("octocat/Hello-World");
     assert(formattedShorthand === "https://github.com/octocat/Hello-World.git", `Converts shorthand to GitHub HTTPS: "${formattedShorthand}"`);
 
+    // In Task 4, tokens are NEVER embedded in the URL to prevent leakage into .git/config
     const formattedTokenUrl = formatCloneUrl("https://github.com/octocat/Hello-World", "ghp_mocktoken123");
-    assert(formattedTokenUrl.includes("ghp_mocktoken123@github.com"), "Injects token securely for private repository cloning");
+    assert(!formattedTokenUrl.includes("ghp_mocktoken123"), "formatCloneUrl does NOT embed raw token in URL (Task 4 credential defense)");
+    assert(!formattedTokenUrl.includes("@github.com"), "formatCloneUrl does NOT embed '@github.com' in URL");
 
     console.log("\n=================================================================");
     console.log(`  Result: ${passed}/${total} assertions passed (${Math.round((passed / total) * 100)}%)`);
@@ -250,3 +252,4 @@ runTests().catch((err) => {
     console.error("Task 3 test suite failed with unhandled exception:", err);
     process.exit(1);
 });
+

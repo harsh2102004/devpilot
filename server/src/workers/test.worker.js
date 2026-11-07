@@ -27,6 +27,7 @@ import {
     prepareRepoDirectory,
     cleanupRepoDirectory,
 } from "../services/repoCloner.service.js";
+import { decryptToken } from "../services/tokenEncryption.service.js";
 
 dotenv.config({ path: "./.env" });
 
@@ -123,13 +124,13 @@ export const processTestJob = async (bullJob) => {
             throw new Error(`Cannot run tests: No repository URL or local directory found for project ${projectId}`);
         }
 
-        // Retrieve GitHub Access Token if user connected their GitHub account
+        // Retrieve GitHub Access Token if user connected their GitHub account (decrypt if encrypted)
         let githubToken = null;
         if (userId && isDbConnected) {
             try {
                 const user = await User.findById(userId).select("+githubAccessToken");
                 if (user?.githubAccessToken) {
-                    githubToken = user.githubAccessToken;
+                    githubToken = user.getDecryptedGitHubToken ? user.getDecryptedGitHubToken() : decryptToken(user.githubAccessToken);
                 }
             } catch {}
         }

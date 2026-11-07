@@ -5,6 +5,7 @@ import { existsSync } from "fs";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { ApiError } from "../utils/ApiError.js";
+import { decryptToken } from "./tokenEncryption.service.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -95,12 +96,13 @@ export const validateRepoBranch = (branch) => {
 };
 
 /**
- * Normalizes git URL and attaches GitHub personal access token if present
+ * Normalizes git URL to standard HTTPS format.
+ * Tokens are NEVER embedded in the URL to prevent leakage into .git/config.
+ *
  * @param {string} repoUrl
- * @param {string|null} token
- * @returns {string}
+ * @returns {string} Clean HTTPS clone URL
  */
-export const formatCloneUrl = (repoUrl, token = null) => {
+export const formatCloneUrl = (repoUrl) => {
     let cleanUrl = repoUrl.trim();
 
     // Support shorthand like "octocat/Hello-World"
@@ -108,9 +110,8 @@ export const formatCloneUrl = (repoUrl, token = null) => {
         cleanUrl = `https://github.com/${cleanUrl}.git`;
     }
 
-    if (token && cleanUrl.startsWith("https://github.com/")) {
-        // Inject token for authenticated cloning of private repos
-        cleanUrl = cleanUrl.replace("https://github.com/", `https://${token}@github.com/`);
+    if (!cleanUrl.endsWith(".git") && cleanUrl.startsWith("https://github.com/")) {
+        cleanUrl = `${cleanUrl.replace(/\/$/, "")}.git`;
     }
 
     return cleanUrl;
@@ -120,12 +121,13 @@ export const formatCloneUrl = (repoUrl, token = null) => {
  * Prepares the repository directory for code analysis:
  * - Local filesystem directories are only allowed if ALLOW_LOCAL_REPOS=true in development.
  * - Validates repository URL and branch against strict security rules.
- * - Performs shallow git clone using '--' separator to prevent option injection.
+ * - Clones WITHOUT token in URL using git extraheader in env (never argv) to prevent credential leakage into .git/config.
+ * - Runs 'git remote set-url origin <clean url>' after clone.
  *
  * @param {object} options
  * @param {string} options.repoUrl - Remote git URL or owner/repo shorthand
  * @param {string} [options.repoBranch="main"] - Target branch
- * @param {string|null} [options.githubAccessToken=null] - GitHub access token
+ * @param {string|null} [options.githubAccessToken=null] - GitHub access token (plain or encrypted)
  * @returns {Promise<{ repoDir: string, isTemp: boolean }>}
  */
 export const prepareRepoDirectory = async ({
@@ -170,18 +172,39 @@ export const prepareRepoDirectory = async ({
         `scan-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
     );
 
-    const cloneUrl = formatCloneUrl(trimmedUrl, githubAccessToken);
+    // Clean URL without embedded tokens
+    const cleanUrl = formatCloneUrl(trimmedUrl);
+
+    // Decrypt token if encrypted, and inject authorization via environment variables (never in argv!)
+    const rawToken = githubAccessToken ? decryptToken(githubAccessToken) : null;
+    const gitEnv = {
+        ...process.env,
+        GIT_TERMINAL_PROMPT: "0",
+        GCM_INTERACTIVE: "never",
+    };
+
+    if (rawToken) {
+        gitEnv.GIT_CONFIG_COUNT = "1";
+        gitEnv.GIT_CONFIG_KEY_0 = "http.extraheader";
+        gitEnv.GIT_CONFIG_VALUE_0 = `AUTHORIZATION: bearer ${rawToken}`;
+    }
 
     try {
         const cloneArgs = ["clone", "--depth", "1"];
         if (repoBranch) {
             cloneArgs.push("--branch", repoBranch);
         }
-        // Place '--' before the URL to ensure it is treated strictly as an argument, never an option
-        cloneArgs.push("--", cloneUrl, tempDir);
+        // Place '--' before the clean URL
+        cloneArgs.push("--", cleanUrl, tempDir);
 
-        // Execute git clone with a 90 second timeout limit
-        await execFileAsync("git", cloneArgs, { timeout: 90000 });
+        // Execute git clone with clean URL and authorization header passed via private env
+        await execFileAsync("git", cloneArgs, { env: gitEnv, timeout: 90000 });
+
+        // Ensure origin remote is clean URL (guarantees .git/config never contains tokens or credentials)
+        await execFileAsync("git", ["remote", "set-url", "origin", cleanUrl], {
+            cwd: tempDir,
+            timeout: 15000,
+        });
 
         return { repoDir: tempDir, isTemp: true };
     } catch (cloneErr) {
@@ -189,8 +212,13 @@ export const prepareRepoDirectory = async ({
         if (repoBranch) {
             try {
                 await cleanupRepoDirectory(tempDir);
-                await execFileAsync("git", ["clone", "--depth", "1", "--", cloneUrl, tempDir], {
+                await execFileAsync("git", ["clone", "--depth", "1", "--", cleanUrl, tempDir], {
+                    env: gitEnv,
                     timeout: 90000,
+                });
+                await execFileAsync("git", ["remote", "set-url", "origin", cleanUrl], {
+                    cwd: tempDir,
+                    timeout: 15000,
                 });
                 return { repoDir: tempDir, isTemp: true };
             } catch {
@@ -202,7 +230,9 @@ export const prepareRepoDirectory = async ({
         await cleanupRepoDirectory(tempDir);
 
         // Sanitize error message to prevent token leakage in logs
-        const safeMessage = cloneErr.message.replace(/https:\/\/[^@]+@github\.com/g, "https://***@github.com");
+        const safeMessage = cloneErr.message
+            .replace(/bearer\s+[A-Za-z0-9_.-]+/gi, "bearer ***")
+            .replace(/https:\/\/[^@]+@github\.com/g, "https://***@github.com");
         throw new ApiError(500, `Failed to clone repository: ${safeMessage}`);
     }
 };

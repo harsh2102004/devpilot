@@ -10,6 +10,7 @@ import { executeAutonomousVerificationLoop } from "../services/verificationLoop.
 import { prepareRepoDirectory, cleanupRepoDirectory } from "../services/repoCloner.service.js";
 import { createAutomatedPullRequest } from "../services/githubPr.service.js";
 import { isDockerAvailable, ALLOWED_TEST_COMMANDS } from "../services/sandbox.service.js";
+import { decryptToken } from "../services/tokenEncryption.service.js";
 
 /**
  * Trigger an asynchronous sandboxed test execution
@@ -325,10 +326,14 @@ export const createPullRequestForFix = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Project does not have a connected GitHub repository URL");
     }
 
-    // Retrieve user's GitHub access token from DB
+    // Retrieve user's GitHub access token from DB (decrypt if encrypted)
     const userWithToken = await User.findById(req.user._id).select("+githubAccessToken");
+    const rawUserToken = userWithToken?.getDecryptedGitHubToken
+        ? userWithToken.getDecryptedGitHubToken()
+        : (userWithToken?.githubAccessToken ? decryptToken(userWithToken.githubAccessToken) : null);
+
     const token =
-        userWithToken?.githubAccessToken ||
+        rawUserToken ||
         process.env.GITHUB_TOKEN ||
         process.env.GITHUB_ACCESS_TOKEN ||
         null;

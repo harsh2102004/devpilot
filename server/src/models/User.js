@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import env from '../config/env.js';
+import { encryptToken, decryptToken, isEncryptedToken } from '../services/tokenEncryption.service.js';
 
 const userSchema = new mongoose.Schema(
     {
@@ -51,13 +52,27 @@ const userSchema = new mongoose.Schema(
 
 // Hash password before saving if modified
 userSchema.pre("save", async function () {
-    if (!this.isModified("password")) return;
-    this.password = await bcrypt.hash(this.password, 10);
+    if (this.isModified("password") && this.password) {
+        this.password = await bcrypt.hash(this.password, 10);
+    }
+
+    // Encrypt githubAccessToken using AES-256-GCM before saving to MongoDB (Task 4)
+    if (this.isModified("githubAccessToken") && this.githubAccessToken) {
+        if (!isEncryptedToken(this.githubAccessToken)) {
+            this.githubAccessToken = encryptToken(this.githubAccessToken);
+        }
+    }
 });
 
 // Compare password method
 userSchema.methods.isPasswordCorrect = async function (password) {
     return await bcrypt.compare(password, this.password);
+};
+
+// Decrypt GitHub Access Token for internal service execution
+userSchema.methods.getDecryptedGitHubToken = function () {
+    if (!this.githubAccessToken) return null;
+    return decryptToken(this.githubAccessToken);
 };
 
 // Generate access token

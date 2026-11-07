@@ -8,6 +8,8 @@ import {
     fetchUserRepositories,
     fetchRepositoryBranches
 } from "../services/github.service.js";
+import { encryptToken, decryptToken } from "../services/tokenEncryption.service.js";
+import { validateRepoUrl, validateRepoBranch } from "../services/repoCloner.service.js";
 
 // 1. Connect & Save GitHub Token
 // POST /api/github/connect
@@ -21,13 +23,13 @@ export const connectGitHub = asyncHandler(async (req, res) => {
     // Direct service call - any Octokit 401/403/500 is caught automatically by asyncHandler
     const githubUser = await verifyGitHubToken(token);
 
-    // Save token and username to User model (selecting +githubAccessToken)
+    // Save encrypted token and username to User model (Task 4)
     const user = await User.findById(req.user._id).select("+githubAccessToken");
     if (!user) {
         throw new ApiError(404, "User not found");
     }
 
-    user.githubAccessToken = token.trim();
+    user.githubAccessToken = encryptToken(token.trim());
     user.githubUsername = githubUser.username;
     await user.save({ validateBeforeSave: false });
 
@@ -79,7 +81,8 @@ export const getUserRepositories = asyncHandler(async (req, res) => {
         throw new ApiError(400, "GitHub account is not connected. Please connect your GitHub account first.");
     }
 
-    const repositories = await fetchUserRepositories(user.githubAccessToken);
+    const plainToken = user.getDecryptedGitHubToken ? user.getDecryptedGitHubToken() : decryptToken(user.githubAccessToken);
+    const repositories = await fetchUserRepositories(plainToken);
 
     return res.status(200).json(
         new ApiResponse(200, repositories, "GitHub repositories fetched successfully")
@@ -98,7 +101,8 @@ export const getRepoBranches = asyncHandler(async (req, res) => {
         throw new ApiError(400, "GitHub account is not connected");
     }
 
-    const branches = await fetchRepositoryBranches(user.githubAccessToken, owner, repo);
+    const plainToken = user.getDecryptedGitHubToken ? user.getDecryptedGitHubToken() : decryptToken(user.githubAccessToken);
+    const branches = await fetchRepositoryBranches(plainToken, owner, repo);
 
     return res.status(200).json(
         new ApiResponse(200, branches, "Branches fetched successfully")
@@ -115,6 +119,12 @@ export const linkRepoToProject = asyncHandler(async (req, res) => {
 
     if (!repoUrl) {
         throw new ApiError(400, "Repository URL is required");
+    }
+
+    // Validate repoUrl and optional repoBranch (Task 3 + Task 4)
+    validateRepoUrl(repoUrl.trim());
+    if (repoBranch) {
+        validateRepoBranch(repoBranch.trim());
     }
 
     const project = await Project.findById(projectId);

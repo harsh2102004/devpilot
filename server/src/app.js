@@ -6,6 +6,7 @@ import projectRoutes from './routes/project.routes.js';
 import scanRoutes from './routes/scan.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import testRoutes from './routes/test.routes.js';
+import githubRoutes from './routes/github.routes.js';
 import { auth } from './middleware/auth.js';
 import { ApiResponse } from './utils/ApiResponse.js';
 import { ApiError } from './utils/ApiError.js';
@@ -99,6 +100,7 @@ app.use('/api', generalRateLimiter);
 // 5. Routes Declaration
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/github', githubRoutes);
 app.use('/api/scan', scanRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/test', testRoutes);
