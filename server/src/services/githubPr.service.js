@@ -519,3 +519,4 @@ export default {
     openPullRequest,
     createAutomatedPullRequest,
 };
+
