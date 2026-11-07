@@ -30,3 +30,4 @@ HEALTHCHECK --interval=15s --timeout=5s --retries=3 --start-period=15s \
 
 # Default command: API server
 CMD ["npm", "start"]
+

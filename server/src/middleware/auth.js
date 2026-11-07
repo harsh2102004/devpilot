@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
+import { isTokenRevoked } from '../services/tokenRevocation.service.js';
 
-const auth = function (req, res, next) {
+const auth = async function (req, res, next) {
     const authHeader = req.header('Authorization');
 
     if (!authHeader) {
@@ -13,8 +14,16 @@ const auth = function (req, res, next) {
             return res.status(401).json({ message: 'Token format is invalid, authorization denied' });
         }
 
+        // Check if token has been revoked or session terminated (Sub-Phase 10B)
+        const revoked = await isTokenRevoked(token);
+        if (revoked) {
+            return res.status(401).json({ message: 'Token has been revoked or session terminated' });
+        }
+
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || 'fallback_secret');
         req.user = decoded.user || decoded;
+        req.token = token; // Attach token for downstream logout revocation
+
         // Normalize: JWT payload uses `id`, but controllers expect `_id`
         if (req.user.id && !req.user._id) {
             req.user._id = req.user.id;
