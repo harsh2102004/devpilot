@@ -25,3 +25,11 @@ Thumbs.db
 
 # Local Documentation & Interview Hub (Keep Local Only)
 docs/
+
+# Uploads & Temporary Upload Storage (Task 5)
+public/temp/*
+!public/temp/.gitkeep
+server/public/temp/*
+!server/public/temp/.gitkeep
+uploads/
+server/uploads/
