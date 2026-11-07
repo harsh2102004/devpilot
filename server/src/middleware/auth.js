@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import env from '../config/env.js';
 import { isTokenRevoked } from '../services/tokenRevocation.service.js';
 
 const auth = async function (req, res, next) {
@@ -20,7 +21,7 @@ const auth = async function (req, res, next) {
             return res.status(401).json({ message: 'Token has been revoked or session terminated' });
         }
 
-        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || 'fallback_secret');
+        const decoded = jwt.verify(token, env.ACCESS_TOKEN_SECRET);
         req.user = decoded.user || decoded;
         req.token = token; // Attach token for downstream logout revocation
 

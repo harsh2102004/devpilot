@@ -12,6 +12,7 @@
  */
 
 import jwt from "jsonwebtoken";
+import env from "./src/config/env.js";
 import app from "./src/app.js";
 import authMiddleware from "./src/middleware/auth.js";
 import {
@@ -49,7 +50,7 @@ async function runTests() {
     console.log("  DevPilot Security Hardening & Rate Limiting (Sub-Phase 10B Live)");
     console.log("=================================================================\n");
 
-    const SECRET = process.env.ACCESS_TOKEN_SECRET || "fallback_secret";
+    const SECRET = env.ACCESS_TOKEN_SECRET;
 
     // -------------------------------------------------------------
     // Group 1: Helmet Production Security Headers
